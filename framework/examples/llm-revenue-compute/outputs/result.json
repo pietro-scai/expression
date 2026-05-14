@@ -1,0 +1,489 @@
+{
+  "model": {
+    "name": "LlmRevenueCompute",
+    "doc": null,
+    "axes": {
+      "time": {
+        "kind": "periods",
+        "values": [
+          2025,
+          2026,
+          2027,
+          2028,
+          2029,
+          2030
+        ]
+      }
+    }
+  },
+  "inputs": {
+    "arr_base": {
+      "value": 9.0,
+      "default": 9.0,
+      "type": "float",
+      "doc": "EOY 2025 ARR ($B, actual)"
+    },
+    "arr_growth_2026": {
+      "value": 3.89,
+      "default": 3.89,
+      "type": "float",
+      "doc": "2026 YoY growth \u2014 anchors arr[2026] to $44 B (SemiAnalysis)"
+    },
+    "arr_growth_2027_seed": {
+      "value": 0.8,
+      "default": 0.8,
+      "type": "float",
+      "doc": "2027 growth rate; decays geometrically each subsequent year"
+    },
+    "arr_growth_decay": {
+      "value": 0.7,
+      "default": 0.7,
+      "type": "float",
+      "doc": "Annual decay multiplier on growth rate from 2028 onward"
+    },
+    "cap_2025": {
+      "value": 0.1,
+      "default": 0.1,
+      "type": "float",
+      "doc": "GW deployed, 2025 \u2014 AWS Trainium + Google TPU cloud (est.)"
+    },
+    "cap_2026": {
+      "value": 1.3,
+      "default": 1.3,
+      "type": "float",
+      "doc": "GW deployed, EOY 2026 \u2014 SpaceX 0.3 GW + Amazon ~1 GW first tranche"
+    },
+    "cap_2027": {
+      "value": 5.0,
+      "default": 5.0,
+      "type": "float",
+      "doc": "GW deployed, 2027 \u2014 Google/Broadcom 5 GW begins; Amazon scaling"
+    },
+    "cap_2028": {
+      "value": 8.5,
+      "default": 8.5,
+      "type": "float",
+      "doc": "GW deployed, 2028 \u2014 Amazon (toward 5 GW total) + Azure $30 B ramp"
+    },
+    "cap_2029": {
+      "value": 11.0,
+      "default": 11.0,
+      "type": "float",
+      "doc": "GW deployed, 2029"
+    },
+    "cap_2030": {
+      "value": 14.0,
+      "default": 14.0,
+      "type": "float",
+      "doc": "GW deployed, 2030 \u2014 all major tranches substantially online"
+    },
+    "util_start": {
+      "value": 0.35,
+      "default": 0.35,
+      "type": "float",
+      "doc": "Revenue-generating fraction of capacity, 2025"
+    },
+    "util_ceiling": {
+      "value": 0.75,
+      "default": 0.75,
+      "type": "float",
+      "doc": "Utilization ceiling by 2030 (training overhead + buffer)"
+    },
+    "dc_twh_2025": {
+      "value": 448.0,
+      "default": 448.0,
+      "type": "float",
+      "doc": "Global data-center electricity, 2025 (TWh/yr, IEA confirmed)"
+    },
+    "dc_twh_2030": {
+      "value": 945.0,
+      "default": 945.0,
+      "type": "float",
+      "doc": "Global data-center electricity, 2030 (TWh/yr, GS base case)"
+    },
+    "llm_share_2025": {
+      "value": 0.25,
+      "default": 0.25,
+      "type": "float",
+      "doc": "LLM share of data-center power, 2025"
+    },
+    "llm_share_2030": {
+      "value": 0.45,
+      "default": 0.45,
+      "type": "float",
+      "doc": "LLM share of data-center power, 2030 (AI displaces conventional)"
+    },
+    "val_anchor_2025": {
+      "value": 350.0,
+      "default": 350.0,
+      "type": "float",
+      "doc": "Valuation ($B), Dec 2025 \u2014 implied pre-Series G"
+    },
+    "multiple_2026": {
+      "value": 20.5,
+      "default": 20.5,
+      "type": "float",
+      "doc": "P/S multiple, 2026 \u2014 ~$900 B / $44 B ARR"
+    },
+    "multiple_floor": {
+      "value": 8.0,
+      "default": 8.0,
+      "type": "float",
+      "doc": "P/S multiple floor, 2030 \u2014 mature hyper-growth SaaS comp"
+    }
+  },
+  "tables": [
+    {
+      "name": "arr_growth_rate",
+      "kind": "row",
+      "doc": "YoY ARR growth rate.\n\n2025  base year \u2014 no prior period, returns 0.\n2026  pinned so arr[2026] = arr_base \u00d7 (1 + 3.89) = $44 B.\n2027  arr_growth_2027_seed (default 80%).\n2028+ geometric decay: seed \u00d7 decay^(years past 2027).\n\nThe decay model reflects the natural S-curve of hyper-growth companies:\n80% \u2192 56% \u2192 39% \u2192 27% maps to the AWS / Azure growth deceleration\ntrajectory, shifted right to account for AI market tailwinds.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 0.0,
+        "2026": 3.89,
+        "2027": 0.8,
+        "2028": 0.5599999999999999,
+        "2029": 0.39199999999999996,
+        "2030": 0.2743999999999999
+      }
+    },
+    {
+      "name": "arr",
+      "kind": "row",
+      "doc": "Annualized Revenue Run-Rate at year-end ($B).\n\nAnchored to $9 B (2025) and $44 B (2026), then projected.\nNote: $44 B was the SemiAnalysis figure from late April 2026;\nEOY 2026 will likely exceed this as growth continued.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 9.0,
+        "2026": 44.010000000000005,
+        "2027": 79.21800000000002,
+        "2028": 123.58008000000004,
+        "2029": 172.02347136000003,
+        "2030": 219.22671190118405
+      }
+    },
+    {
+      "name": "capacity_gw",
+      "kind": "row",
+      "doc": "Anthropic's deployed compute capacity in GW (inference + training combined).\n\nEach value is sourced from disclosed infrastructure deals:\n  2025  Cloud era: AWS Trainium + Google TPU allocations (~100 MW est.)\n  2026  SpaceX Colossus (300 MW, 220 K H100s) + Amazon ~1 GW first tranche\n  2027  Google/Broadcom 5 GW agreement begins; Amazon scaling toward 5 GW total\n  2028  Amazon approaching 5 GW; Azure $30 B ramp materializes\n  2029/30  All tranches at scale; possible additional deals not yet announced",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 0.1,
+        "2026": 1.3,
+        "2027": 5.0,
+        "2028": 8.5,
+        "2029": 11.0,
+        "2030": 14.0
+      }
+    },
+    {
+      "name": "util_rate",
+      "kind": "row",
+      "doc": "Fraction of capacity_gw generating inference revenue (not training or idle).\n\nLinear ramp from util_start (2025) to util_ceiling (2030).\nUtilization is suppressed in 2025 because Anthropic was on pay-per-use cloud\n(no idle capacity concept); it stays moderate through 2027 because the\nGoogle/Broadcom capacity arrives faster than inference demand can absorb it.\n\nOverride specific years when you know a major model training run is scheduled\n(e.g. `sweet overrides add util_rate[2027]=0.40`).",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 0.35,
+        "2026": 0.43,
+        "2027": 0.51,
+        "2028": 0.59,
+        "2029": 0.67,
+        "2030": 0.75
+      }
+    },
+    {
+      "name": "revenue_gw",
+      "kind": "row",
+      "doc": "GW actively generating inference revenue = capacity_gw \u00d7 util_rate.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 0.034999999999999996,
+        "2026": 0.559,
+        "2027": 2.55,
+        "2028": 5.015,
+        "2029": 7.37,
+        "2030": 10.5
+      }
+    },
+    {
+      "name": "arr_per_revenue_gw",
+      "kind": "row",
+      "doc": "$B of ARR per GW of revenue-generating inference compute.\n\nTracks Anthropic's pricing power and inference efficiency over time.\nThe sharp drop from 2026\u21922027 ($79\u2192$31 /GW) reflects the capacity\nexplosion as Google/Broadcom 5 GW comes online ahead of demand \u2014\na deliberate \"build ahead\" strategy. The gradual decline thereafter\nreflects token price compression (~80% per 18 months industry-wide)\npartially offset by volume growth.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 257.14285714285717,
+        "2026": 78.72987477638641,
+        "2027": 31.065882352941184,
+        "2028": 24.642089730807587,
+        "2029": 23.341040890094984,
+        "2030": 20.878734466779434
+      }
+    },
+    {
+      "name": "global_dc_twh",
+      "kind": "row",
+      "doc": "Global data-center electricity consumption (TWh/year).\n\nLinear interpolation between two GS/IEA anchors:\n  448 TWh (2025, IEA confirmed) \u2192 945 TWh (2030, GS base case).\nGS also has an accelerated case at ~1,050 TWh; the base case is used here.\nOverride dc_twh_2030 to stress-test bull/bear scenarios.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 448.0,
+        "2026": 547.4,
+        "2027": 646.8,
+        "2028": 746.2,
+        "2029": 845.6,
+        "2030": 945.0
+      }
+    },
+    {
+      "name": "llm_dc_share",
+      "kind": "row",
+      "doc": "LLM workloads as fraction of total data-center electricity.\n\nGrows from 25% (2025) to 45% (2030) as AI inference and training\ndisplace traditional web/database workloads. At 45%, LLMs alone\nwould consume ~425 TWh \u2014 comparable to all of France today.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 0.25,
+        "2026": 0.29000000000000004,
+        "2027": 0.33,
+        "2028": 0.37,
+        "2029": 0.41000000000000003,
+        "2030": 0.45
+      }
+    },
+    {
+      "name": "global_llm_twh",
+      "kind": "row",
+      "doc": "Total electricity consumed by LLM inference + training globally (TWh/year).",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 112.0,
+        "2026": 158.746,
+        "2027": 213.444,
+        "2028": 276.094,
+        "2029": 346.696,
+        "2030": 425.25
+      }
+    },
+    {
+      "name": "global_llm_gw",
+      "kind": "row",
+      "doc": "Global LLM compute expressed as average continuous load (GW).\n\nConversion: TWh/year \u00f7 8.76 = average GW\n(8,760 hours in a year; the \u00f71000 from TWh\u2192GWh cancels with the GW unit).\n\nThis is the total installed/running LLM compute in the world at any moment \u2014\nincluding Google's internal Gemini fleet, Meta's Llama inference, Chinese LLMs,\nand all open-source deployments, not just commercial API providers.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 12.785388127853881,
+        "2026": 18.121689497716897,
+        "2027": 24.365753424657534,
+        "2028": 31.5175799086758,
+        "2029": 39.577168949771696,
+        "2030": 48.544520547945204
+      }
+    },
+    {
+      "name": "anthropic_compute_share",
+      "kind": "row",
+      "doc": "Anthropic's revenue_gw as a fraction of global_llm_gw.\n\nIMPORTANT: this is compute market share, not revenue market share.\nAnthropic reports ~40% of *enterprise API spend*, but enterprise API\nis a small, premium slice of global LLM compute. The much larger base\nincludes Google/Meta internal workloads, open-source self-hosting, and\nChinese deployments \u2014 none of which pay Anthropic.\n\nA large gap between this metric and the 40% spend share confirms that\nAnthropic earns a significant revenue premium per GW vs the market average.\nWatch this converge as token prices commoditize.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 0.0027374999999999995,
+        "2026": 0.03084701346805589,
+        "2027": 0.10465508517456569,
+        "2028": 0.15911754692242497,
+        "2029": 0.18621847382144585,
+        "2030": 0.2162962962962963
+      }
+    },
+    {
+      "name": "revenue_multiple",
+      "kind": "row",
+      "doc": "EV / ARR (P/S multiple).\n\nTwo observed anchors:\n  Dec 2025:  val_anchor_2025 / arr[2025]  \u2248 38.9\u00d7  ($350 B / $9 B)\n  Apr 2026:  multiple_2026               = 20.5\u00d7  (~$900 B / $44 B)\nThis 2025\u21922026 compression (39\u00d7 \u2192 20\u00d7) is already confirmed \u2014 the market\nre-rated as revenue scaled.\n\n2027\u20132030: linear compression from multiple_2026 to multiple_floor (8\u00d7).\nEven at 8\u00d7 in 2030, this implies a premium multiple for a $200 B+ ARR business.\nA mature SaaS comps like Salesforce or ServiceNow trade at 7\u201310\u00d7 revenue.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 38.888888888888886,
+        "2026": 20.5,
+        "2027": 17.375,
+        "2028": 14.25,
+        "2029": 11.125,
+        "2030": 8.0
+      }
+    },
+    {
+      "name": "valuation",
+      "kind": "row",
+      "doc": "Implied enterprise valuation ($B) = ARR \u00d7 revenue_multiple.\n\n2025 is the anchor ($350 B); all subsequent years are model output.\nThe peak implied by this model (~$1.9 T in 2029) reflects high growth\nmultiples on a $170 B ARR base \u2014 compares to Apple at ~$3.8 T on ~$400 B revenue.",
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 350.0,
+        "2026": 902.2050000000002,
+        "2027": 1376.4127500000004,
+        "2028": 1761.0161400000006,
+        "2029": 1913.7611188800004,
+        "2030": 1753.8136952094724
+      }
+    }
+  ],
+  "scalars": []
+}
