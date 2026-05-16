@@ -9,7 +9,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { CheckIcon, CopyIcon } from "lucide-react";
+import { Toggle } from "@/components/ui/toggle";
+import { useControllableState } from "@radix-ui/react-use-controllable-state";
+import { CheckIcon, CopyIcon, ListOrderedIcon } from "lucide-react";
 import type { ComponentProps, CSSProperties, HTMLAttributes } from "react";
 import {
   createContext,
@@ -112,6 +114,8 @@ type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
+  defaultShowLineNumbers?: boolean;
+  onShowLineNumbersChange?: (showLineNumbers: boolean) => void;
 };
 
 interface TokenizedCode {
@@ -122,12 +126,12 @@ interface TokenizedCode {
 
 interface CodeBlockContextType {
   code: string;
+  showLineNumbers: boolean;
+  setShowLineNumbers: (showLineNumbers: boolean) => void;
 }
 
 // Context
-const CodeBlockContext = createContext<CodeBlockContextType>({
-  code: "",
-});
+const CodeBlockContext = createContext<CodeBlockContextType | null>(null);
 
 // Highlighter cache (singleton per language)
 const highlighterCache = new Map<
@@ -158,6 +162,7 @@ const getHighlighter = (
   const highlighterPromise = createHighlighter({
     langs: [language],
     themes: ["github-light", "github-dark"],
+    
   });
 
   highlighterCache.set(language, highlighterPromise);
@@ -374,12 +379,15 @@ export const CodeBlockActions = ({
 export const CodeBlockContent = ({
   code,
   language,
-  showLineNumbers = false,
+  showLineNumbers: showLineNumbersProp,
 }: {
   code: string;
   language: BundledLanguage;
   showLineNumbers?: boolean;
 }) => {
+  const codeBlockContext = useContext(CodeBlockContext);
+  const showLineNumbers =
+    showLineNumbersProp ?? codeBlockContext?.showLineNumbers ?? false;
   // Memoized raw tokens for immediate display
   const rawTokens = useMemo(() => createRawTokens(code), [code]);
 
@@ -428,12 +436,23 @@ export const CodeBlockContent = ({
 export const CodeBlock = ({
   code,
   language,
-  showLineNumbers = false,
+  showLineNumbers: showLineNumbersProp,
+  defaultShowLineNumbers = false,
+  onShowLineNumbersChange,
   className,
   children,
   ...props
 }: CodeBlockProps) => {
-  const contextValue = useMemo(() => ({ code }), [code]);
+  const [showLineNumbers, setShowLineNumbers] = useControllableState({
+    defaultProp: defaultShowLineNumbers,
+    onChange: onShowLineNumbersChange,
+    prop: showLineNumbersProp,
+  });
+
+  const contextValue = useMemo(
+    () => ({ code, setShowLineNumbers, showLineNumbers }),
+    [code, setShowLineNumbers, showLineNumbers]
+  );
 
   return (
     <CodeBlockContext.Provider value={contextValue}>
@@ -446,6 +465,42 @@ export const CodeBlock = ({
         />
       </CodeBlockContainer>
     </CodeBlockContext.Provider>
+  );
+};
+
+export type CodeBlockLineNumbersToggleProps = ComponentProps<typeof Toggle> & {
+  pressed?: boolean;
+  onPressedChange?: (pressed: boolean) => void;
+};
+
+export const CodeBlockLineNumbersToggle = ({
+  pressed: pressedProp,
+  onPressedChange,
+  children,
+  className,
+  ...props
+}: CodeBlockLineNumbersToggleProps) => {
+  const codeBlockContext = useContext(CodeBlockContext);
+  const [localPressed, setLocalPressed] = useControllableState({
+    defaultProp: false,
+    onChange: onPressedChange,
+    prop: pressedProp,
+  });
+
+  const pressed = codeBlockContext?.showLineNumbers ?? localPressed;
+  const setPressed = codeBlockContext?.setShowLineNumbers ?? setLocalPressed;
+
+  return (
+    <Toggle
+      aria-label="Toggle line numbers"
+      className={cn("size-7 shrink-0 p-0", className)}
+      onPressedChange={setPressed}
+      pressed={pressed}
+      size="sm"
+      {...props}
+    >
+      {children ?? <ListOrderedIcon size={14} />}
+    </Toggle>
   );
 };
 
@@ -465,7 +520,8 @@ export const CodeBlockCopyButton = ({
 }: CodeBlockCopyButtonProps) => {
   const [isCopied, setIsCopied] = useState(false);
   const timeoutRef = useRef<number>(0);
-  const { code } = useContext(CodeBlockContext);
+  const codeBlockContext = useContext(CodeBlockContext);
+  const code = codeBlockContext?.code ?? "";
 
   const copyToClipboard = useCallback(async () => {
     if (typeof window === "undefined" || !navigator?.clipboard?.writeText) {

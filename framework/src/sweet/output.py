@@ -130,7 +130,7 @@ def _source_of(fn: Any) -> str | None:
 def _node_deps(name: str, fn: Any, known: set[str], explicit: set[str] | None) -> list[str]:
     if explicit is not None:
         return sorted(explicit)
-    return sorted(_node_dependencies(name, fn, known))
+    return sorted(_node_dependencies(name, fn, known, include_module_globals=True))
 
 
 def _build_dag(model: Model) -> dict[str, Any]:
@@ -145,8 +145,24 @@ def _build_dag(model: Model) -> dict[str, Any]:
     globs = cls._globs
     dep_models = cls._depends  # pyright: ignore[reportPrivateUsage]
     known = set(rows) | set(scalars) | set(globs) | set(dep_models)
+    row_deps = {
+        name: _node_deps(name, r.fn, known, r.explicit_deps) for name, r in rows.items()
+    }
+    scalar_deps = {
+        name: _node_deps(name, s.fn, known, s.explicit_deps) for name, s in scalars.items()
+    }
+    module_globals = sorted(
+        {
+            dep
+            for deps in [*row_deps.values(), *scalar_deps.values()]
+            for dep in deps
+            if dep not in known
+        }
+    )
     nodes = [
         {"name": n, "kind": "glob"} for n in sorted(globs)
+    ] + [
+        {"name": n, "kind": "glob"} for n in module_globals
     ] + [
         {"name": n, "kind": "depends", "upstream": dep_models[n].upstream.__name__}
         for n in sorted(dep_models)
@@ -156,11 +172,11 @@ def _build_dag(model: Model) -> dict[str, Any]:
         {"name": n, "kind": "scalar"} for n in sorted(scalars)
     ]
     edges: list[dict[str, str]] = []
-    for name, r in rows.items():
-        for dep in _node_deps(name, r.fn, known, r.explicit_deps):
+    for name, deps in row_deps.items():
+        for dep in deps:
             edges.append({"from": dep, "to": name})
-    for name, s in scalars.items():
-        for dep in _node_deps(name, s.fn, known, s.explicit_deps):
+    for name, deps in scalar_deps.items():
+        for dep in deps:
             edges.append({"from": dep, "to": name})
     return {"nodes": nodes, "edges": edges}
 

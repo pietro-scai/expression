@@ -107,7 +107,7 @@ export const AgentTool = memo(
         </AccordionTrigger>
         <AccordionContent className="px-3 pb-3">
           <div className="rounded-md bg-muted/50">
-            <CodeBlock code={JSON.stringify(schema, null, 2)} language="json" />
+            <CodeBlock code={JSON.stringify(schema, null, 2)} language="json"/>
           </div>
         </AccordionContent>
       </AccordionItem>

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { GlobValue, ModelSnapshot, TableResult } from "@/lib/model-types";
-import { CodeBlockContent } from "@/components/ai-elements/code-block";
+import { CodeBlockEditor } from "@/components/ai-elements/code-block-editor";
 import { Accordion as AccordionPrimitive } from "radix-ui";
 import {
   CheckCircle2Icon,
@@ -300,11 +300,26 @@ function PythonTab({ snapshots }: { snapshots: ModelSnapshot[] }) {
       </div>
     );
   }
-  return <CodeBlockContent code={source} language="python" />;
+  return (
+    <CodeBlockEditor
+      className="flex min-h-0 flex-1 flex-co border-none! p-0! m-0! bg-transparent!"
+      code={source}
+      language="python"
+      minHeight={280}
+    />
+  );
 }
 
 function JsonTab({ code }: { code: string }) {
-  return <CodeBlockContent code={code} language="json" />;
+  return (
+    <CodeBlockEditor
+      className="flex min-h-0 flex-1 flex-col border-none! p-0! m-0! bg-transparent!"
+      code={code}
+      language="json"
+      minHeight={280}
+      readOnly
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -420,17 +435,17 @@ export function ModelPanel({ className }: { className?: string }) {
           )}
           {tab === "graph" && <ModelGraph snapshots={snapshots} />}
           {tab === "python" && (
-            <div className="h-full overflow-auto">
+            <div className="flex h-full min-h-0 flex-col p-2">
               <PythonTab snapshots={snapshots} />
             </div>
           )}
           {tab === "result-json" && (
-            <div className="h-full overflow-auto">
+            <div className="flex h-full min-h-0 flex-col p-2">
               <JsonTab code={resultJson} />
             </div>
           )}
           {tab === "model-json" && (
-            <div className="h-full overflow-auto">
+            <div className="flex h-full min-h-0 flex-col p-2">
               <JsonTab code={modelJson} />
             </div>
           )}

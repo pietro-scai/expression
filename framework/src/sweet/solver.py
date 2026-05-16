@@ -15,9 +15,11 @@ Steps:
 from __future__ import annotations
 
 import ast
+import builtins
 import inspect
 import itertools
 import textwrap
+import types
 from typing import TYPE_CHECKING
 
 import networkx as nx
@@ -28,8 +30,95 @@ if TYPE_CHECKING:
     from .core import Model
 
 
-def _node_dependencies(self_name: str, fn: object, known: set[str]) -> set[str]:
-    """Return the set of *other* nodes referenced as ``self.<name>(...)``/``self.<name>``."""
+class _LocalNameCollector(ast.NodeVisitor):
+    """Collect names bound inside a function so globals can be distinguished."""
+
+    def __init__(self) -> None:
+        self.names: set[str] = set()
+
+    def visit_arg(self, node: ast.arg) -> None:
+        self.names.add(node.arg)
+
+    def visit_Name(self, node: ast.Name) -> None:
+        if isinstance(node.ctx, (ast.Store, ast.Del)):
+            self.names.add(node.id)
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        if node.name is not None:
+            self.names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_Import(self, node: ast.Import) -> None:
+        for alias in node.names:
+            self.names.add(alias.asname or alias.name.split(".", 1)[0])
+
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
+        for alias in node.names:
+            self.names.add(alias.asname or alias.name)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
+        self.names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
+        self.names.add(node.name)
+        self.generic_visit(node)
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:
+        self.names.add(node.name)
+        self.generic_visit(node)
+
+
+def _is_trackable_global(value: object) -> bool:
+    """Return whether a module global is data-like enough to report as a dep."""
+    return not (
+        isinstance(value, types.ModuleType)
+        or inspect.isclass(value)
+        or inspect.isroutine(value)
+        or inspect.ismethoddescriptor(value)
+    )
+
+
+def _module_global_dependencies(fn: object, tree: ast.AST, known: set[str]) -> set[str]:
+    fn_globals = getattr(fn, "__globals__", None)
+    if not isinstance(fn_globals, dict):
+        return set()
+
+    collector = _LocalNameCollector()
+    collector.visit(tree)
+    builtin_names = set(dir(builtins))
+    deps: set[str] = set()
+
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Name) or not isinstance(node.ctx, ast.Load):
+            continue
+        name = node.id
+        if (
+            name in known
+            or name in collector.names
+            or name in builtin_names
+            or name.startswith("__")
+            or name not in fn_globals
+        ):
+            continue
+        if _is_trackable_global(fn_globals[name]):
+            deps.add(name)
+    return deps
+
+
+def _node_dependencies(
+    self_name: str,
+    fn: object,
+    known: set[str],
+    *,
+    include_module_globals: bool = False,
+) -> set[str]:
+    """Return other nodes referenced by a row/scalar function.
+
+    ``known`` covers model attributes such as rows, scalars, globs, and depends().
+    When requested, module-level data globals read by the function are reported
+    too so ``describe`` can show dependencies on constants outside the class.
+    """
     try:
         source = textwrap.dedent(inspect.getsource(fn))  # type: ignore[arg-type]
     except (OSError, TypeError):
@@ -46,6 +135,8 @@ def _node_dependencies(self_name: str, fn: object, known: set[str]) -> set[str]:
             and node.attr != self_name
         ):
             deps.add(node.attr)
+    if include_module_globals:
+        deps.update(_module_global_dependencies(fn, tree, known))
     return deps
 
 

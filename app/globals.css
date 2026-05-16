@@ -124,3 +124,17 @@
     @apply h-full overflow-hidden font-sans bg-background text-foreground;
     }
 }
+
+/* Monaco editor — match Shiki code block */
+[data-language] .monaco-editor .view-overlays .current-line {
+  border: none !important;
+  background: transparent !important;
+}
+[data-language] .monaco-editor .view-lines,
+[data-language] .monaco-editor .margin-view-overlays {
+  font-family: var(--font-mono), ui-monospace, monospace !important;
+}
+[data-language] .monaco-editor .core-guide,
+[data-language] .monaco-editor .cdr.bracket-indent-guide {
+  display: none !important;
+}

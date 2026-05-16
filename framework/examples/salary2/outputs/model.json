@@ -1,0 +1,384 @@
+{
+  "models": [
+    {
+      "name": "BudgetModel",
+      "doc": "Simple annual budget model tracking income, expenses, and net balance.",
+      "axes": {
+        "time": {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      },
+      "globals": {
+        "base_salary": {
+          "default": 120000,
+          "type": "int",
+          "doc": "Base salary income ($/yr)"
+        },
+        "salary_growth": {
+          "default": 0.04,
+          "type": "float",
+          "doc": "Annual salary growth rate"
+        },
+        "other_income": {
+          "default": 12000,
+          "type": "int",
+          "doc": "Other income per year (freelance, dividends, etc.)"
+        },
+        "housing": {
+          "default": 24000,
+          "type": "int",
+          "doc": "Annual housing cost (rent/mortgage)"
+        },
+        "food": {
+          "default": 7200,
+          "type": "int",
+          "doc": "Annual food & groceries"
+        },
+        "transport": {
+          "default": 4800,
+          "type": "int",
+          "doc": "Annual transport cost"
+        },
+        "utilities": {
+          "default": 2400,
+          "type": "int",
+          "doc": "Annual utilities"
+        },
+        "entertainment": {
+          "default": 3600,
+          "type": "int",
+          "doc": "Annual entertainment & subscriptions"
+        },
+        "misc_expenses": {
+          "default": 3000,
+          "type": "int",
+          "doc": "Miscellaneous expenses"
+        },
+        "expense_growth": {
+          "default": 0.03,
+          "type": "float",
+          "doc": "Annual expense inflation rate"
+        }
+      },
+      "rows": [
+        {
+          "name": "salary",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "base_salary",
+            "salary_growth"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "from sweet import Model, periods, glob, row, dim\n\n\nclass BudgetModel(Model):\n    \"\"\"Simple annual budget model tracking income, expenses, and net balance.\"\"\"\n\n    time = periods(2025, 2030)\n\n    # --- Income assumptions ---\n    base_salary = glob(120_000, doc=\"Base salary income ($/yr)\")\n    salary_growth = glob(0.04, doc=\"Annual salary growth rate\")\n    other_income = glob(12_000, doc=\"Other income per year (freelance, dividends, etc.)\")\n\n    # --- Expense assumptions ---\n    housing = glob(24_000, doc=\"Annual housing cost (rent/mortgage)\")\n    food = glob(7_200, doc=\"Annual food & groceries\")\n    transport = glob(4_800, doc=\"Annual transport cost\")\n    utilities = glob(2_400, doc=\"Annual utilities\")\n    entertainment = glob(3_600, doc=\"Annual entertainment & subscriptions\")\n    misc_expenses = glob(3_000, doc=\"Miscellaneous expenses\")\n    expense_growth = glob(0.03, doc=\"Annual expense inflation rate\")\n\n    # --- Rows ---\n\n    @row\n    def salary():\n        \"\"\"Salary income, growing each year ($).\"\"\"\n        salary[first] = base_salary\n        salary[n] = salary[n - 1] * (1 + salary_growth)\n\n    @row\n    def total_income():\n        \"\"\"Total income = salary + other income ($).\"\"\"\n        total_income[n] = salary[n] + other_income\n\n    @row\n    def fixed_expenses():\n        \"\"\"Fixed annual expenses, inflation-adjusted ($).\"\"\"\n        fixed_expenses[first] = (\n            housing + food + transport + utilities + entertainment + misc_expenses\n        )\n        fixed_expenses[n] = fixed_expenses[n - 1] * (1 + expense_growth)\n\n    @row\n    def total_expenses():\n        \"\"\"Total expenses ($).\"\"\"\n        total_expenses[n] = fixed_expenses[n]\n\n    @row\n    def net_budget():\n        \"\"\"Net budget surplus / (deficit) = income - expenses ($).\"\"\"\n        net_budget[n] = total_income[n] - total_expenses[n]\n\n    @row\n    def savings_rate():\n        \"\"\"Savings rate = net budget / total income (%).\"\"\"\n        savings_rate[n] = net_budget[n] / total_income[n]\n\n    @row\n    def cumulative_savings():\n        \"\"\"Cumulative savings over the planning horizon ($).\"\"\"\n        cumulative_savings[first] = net_budget[first]\n        cumulative_savings[n] = cumulative_savings[n - 1] + net_budget[n]\n"
+        },
+        {
+          "name": "total_income",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "other_income",
+            "salary"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "from sweet import Model, periods, glob, row, dim\n\n\nclass BudgetModel(Model):\n    \"\"\"Simple annual budget model tracking income, expenses, and net balance.\"\"\"\n\n    time = periods(2025, 2030)\n\n    # --- Income assumptions ---\n    base_salary = glob(120_000, doc=\"Base salary income ($/yr)\")\n    salary_growth = glob(0.04, doc=\"Annual salary growth rate\")\n    other_income = glob(12_000, doc=\"Other income per year (freelance, dividends, etc.)\")\n\n    # --- Expense assumptions ---\n    housing = glob(24_000, doc=\"Annual housing cost (rent/mortgage)\")\n    food = glob(7_200, doc=\"Annual food & groceries\")\n    transport = glob(4_800, doc=\"Annual transport cost\")\n    utilities = glob(2_400, doc=\"Annual utilities\")\n    entertainment = glob(3_600, doc=\"Annual entertainment & subscriptions\")\n    misc_expenses = glob(3_000, doc=\"Miscellaneous expenses\")\n    expense_growth = glob(0.03, doc=\"Annual expense inflation rate\")\n\n    # --- Rows ---\n\n    @row\n    def salary():\n        \"\"\"Salary income, growing each year ($).\"\"\"\n        salary[first] = base_salary\n        salary[n] = salary[n - 1] * (1 + salary_growth)\n\n    @row\n    def total_income():\n        \"\"\"Total income = salary + other income ($).\"\"\"\n        total_income[n] = salary[n] + other_income\n\n    @row\n    def fixed_expenses():\n        \"\"\"Fixed annual expenses, inflation-adjusted ($).\"\"\"\n        fixed_expenses[first] = (\n            housing + food + transport + utilities + entertainment + misc_expenses\n        )\n        fixed_expenses[n] = fixed_expenses[n - 1] * (1 + expense_growth)\n\n    @row\n    def total_expenses():\n        \"\"\"Total expenses ($).\"\"\"\n        total_expenses[n] = fixed_expenses[n]\n\n    @row\n    def net_budget():\n        \"\"\"Net budget surplus / (deficit) = income - expenses ($).\"\"\"\n        net_budget[n] = total_income[n] - total_expenses[n]\n\n    @row\n    def savings_rate():\n        \"\"\"Savings rate = net budget / total income (%).\"\"\"\n        savings_rate[n] = net_budget[n] / total_income[n]\n\n    @row\n    def cumulative_savings():\n        \"\"\"Cumulative savings over the planning horizon ($).\"\"\"\n        cumulative_savings[first] = net_budget[first]\n        cumulative_savings[n] = cumulative_savings[n - 1] + net_budget[n]\n"
+        },
+        {
+          "name": "fixed_expenses",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "entertainment",
+            "expense_growth",
+            "food",
+            "housing",
+            "misc_expenses",
+            "transport",
+            "utilities"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "from sweet import Model, periods, glob, row, dim\n\n\nclass BudgetModel(Model):\n    \"\"\"Simple annual budget model tracking income, expenses, and net balance.\"\"\"\n\n    time = periods(2025, 2030)\n\n    # --- Income assumptions ---\n    base_salary = glob(120_000, doc=\"Base salary income ($/yr)\")\n    salary_growth = glob(0.04, doc=\"Annual salary growth rate\")\n    other_income = glob(12_000, doc=\"Other income per year (freelance, dividends, etc.)\")\n\n    # --- Expense assumptions ---\n    housing = glob(24_000, doc=\"Annual housing cost (rent/mortgage)\")\n    food = glob(7_200, doc=\"Annual food & groceries\")\n    transport = glob(4_800, doc=\"Annual transport cost\")\n    utilities = glob(2_400, doc=\"Annual utilities\")\n    entertainment = glob(3_600, doc=\"Annual entertainment & subscriptions\")\n    misc_expenses = glob(3_000, doc=\"Miscellaneous expenses\")\n    expense_growth = glob(0.03, doc=\"Annual expense inflation rate\")\n\n    # --- Rows ---\n\n    @row\n    def salary():\n        \"\"\"Salary income, growing each year ($).\"\"\"\n        salary[first] = base_salary\n        salary[n] = salary[n - 1] * (1 + salary_growth)\n\n    @row\n    def total_income():\n        \"\"\"Total income = salary + other income ($).\"\"\"\n        total_income[n] = salary[n] + other_income\n\n    @row\n    def fixed_expenses():\n        \"\"\"Fixed annual expenses, inflation-adjusted ($).\"\"\"\n        fixed_expenses[first] = (\n            housing + food + transport + utilities + entertainment + misc_expenses\n        )\n        fixed_expenses[n] = fixed_expenses[n - 1] * (1 + expense_growth)\n\n    @row\n    def total_expenses():\n        \"\"\"Total expenses ($).\"\"\"\n        total_expenses[n] = fixed_expenses[n]\n\n    @row\n    def net_budget():\n        \"\"\"Net budget surplus / (deficit) = income - expenses ($).\"\"\"\n        net_budget[n] = total_income[n] - total_expenses[n]\n\n    @row\n    def savings_rate():\n        \"\"\"Savings rate = net budget / total income (%).\"\"\"\n        savings_rate[n] = net_budget[n] / total_income[n]\n\n    @row\n    def cumulative_savings():\n        \"\"\"Cumulative savings over the planning horizon ($).\"\"\"\n        cumulative_savings[first] = net_budget[first]\n        cumulative_savings[n] = cumulative_savings[n - 1] + net_budget[n]\n"
+        },
+        {
+          "name": "total_expenses",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "fixed_expenses"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "from sweet import Model, periods, glob, row, dim\n\n\nclass BudgetModel(Model):\n    \"\"\"Simple annual budget model tracking income, expenses, and net balance.\"\"\"\n\n    time = periods(2025, 2030)\n\n    # --- Income assumptions ---\n    base_salary = glob(120_000, doc=\"Base salary income ($/yr)\")\n    salary_growth = glob(0.04, doc=\"Annual salary growth rate\")\n    other_income = glob(12_000, doc=\"Other income per year (freelance, dividends, etc.)\")\n\n    # --- Expense assumptions ---\n    housing = glob(24_000, doc=\"Annual housing cost (rent/mortgage)\")\n    food = glob(7_200, doc=\"Annual food & groceries\")\n    transport = glob(4_800, doc=\"Annual transport cost\")\n    utilities = glob(2_400, doc=\"Annual utilities\")\n    entertainment = glob(3_600, doc=\"Annual entertainment & subscriptions\")\n    misc_expenses = glob(3_000, doc=\"Miscellaneous expenses\")\n    expense_growth = glob(0.03, doc=\"Annual expense inflation rate\")\n\n    # --- Rows ---\n\n    @row\n    def salary():\n        \"\"\"Salary income, growing each year ($).\"\"\"\n        salary[first] = base_salary\n        salary[n] = salary[n - 1] * (1 + salary_growth)\n\n    @row\n    def total_income():\n        \"\"\"Total income = salary + other income ($).\"\"\"\n        total_income[n] = salary[n] + other_income\n\n    @row\n    def fixed_expenses():\n        \"\"\"Fixed annual expenses, inflation-adjusted ($).\"\"\"\n        fixed_expenses[first] = (\n            housing + food + transport + utilities + entertainment + misc_expenses\n        )\n        fixed_expenses[n] = fixed_expenses[n - 1] * (1 + expense_growth)\n\n    @row\n    def total_expenses():\n        \"\"\"Total expenses ($).\"\"\"\n        total_expenses[n] = fixed_expenses[n]\n\n    @row\n    def net_budget():\n        \"\"\"Net budget surplus / (deficit) = income - expenses ($).\"\"\"\n        net_budget[n] = total_income[n] - total_expenses[n]\n\n    @row\n    def savings_rate():\n        \"\"\"Savings rate = net budget / total income (%).\"\"\"\n        savings_rate[n] = net_budget[n] / total_income[n]\n\n    @row\n    def cumulative_savings():\n        \"\"\"Cumulative savings over the planning horizon ($).\"\"\"\n        cumulative_savings[first] = net_budget[first]\n        cumulative_savings[n] = cumulative_savings[n - 1] + net_budget[n]\n"
+        },
+        {
+          "name": "net_budget",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "total_expenses",
+            "total_income"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "from sweet import Model, periods, glob, row, dim\n\n\nclass BudgetModel(Model):\n    \"\"\"Simple annual budget model tracking income, expenses, and net balance.\"\"\"\n\n    time = periods(2025, 2030)\n\n    # --- Income assumptions ---\n    base_salary = glob(120_000, doc=\"Base salary income ($/yr)\")\n    salary_growth = glob(0.04, doc=\"Annual salary growth rate\")\n    other_income = glob(12_000, doc=\"Other income per year (freelance, dividends, etc.)\")\n\n    # --- Expense assumptions ---\n    housing = glob(24_000, doc=\"Annual housing cost (rent/mortgage)\")\n    food = glob(7_200, doc=\"Annual food & groceries\")\n    transport = glob(4_800, doc=\"Annual transport cost\")\n    utilities = glob(2_400, doc=\"Annual utilities\")\n    entertainment = glob(3_600, doc=\"Annual entertainment & subscriptions\")\n    misc_expenses = glob(3_000, doc=\"Miscellaneous expenses\")\n    expense_growth = glob(0.03, doc=\"Annual expense inflation rate\")\n\n    # --- Rows ---\n\n    @row\n    def salary():\n        \"\"\"Salary income, growing each year ($).\"\"\"\n        salary[first] = base_salary\n        salary[n] = salary[n - 1] * (1 + salary_growth)\n\n    @row\n    def total_income():\n        \"\"\"Total income = salary + other income ($).\"\"\"\n        total_income[n] = salary[n] + other_income\n\n    @row\n    def fixed_expenses():\n        \"\"\"Fixed annual expenses, inflation-adjusted ($).\"\"\"\n        fixed_expenses[first] = (\n            housing + food + transport + utilities + entertainment + misc_expenses\n        )\n        fixed_expenses[n] = fixed_expenses[n - 1] * (1 + expense_growth)\n\n    @row\n    def total_expenses():\n        \"\"\"Total expenses ($).\"\"\"\n        total_expenses[n] = fixed_expenses[n]\n\n    @row\n    def net_budget():\n        \"\"\"Net budget surplus / (deficit) = income - expenses ($).\"\"\"\n        net_budget[n] = total_income[n] - total_expenses[n]\n\n    @row\n    def savings_rate():\n        \"\"\"Savings rate = net budget / total income (%).\"\"\"\n        savings_rate[n] = net_budget[n] / total_income[n]\n\n    @row\n    def cumulative_savings():\n        \"\"\"Cumulative savings over the planning horizon ($).\"\"\"\n        cumulative_savings[first] = net_budget[first]\n        cumulative_savings[n] = cumulative_savings[n - 1] + net_budget[n]\n"
+        },
+        {
+          "name": "savings_rate",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "net_budget",
+            "total_income"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "from sweet import Model, periods, glob, row, dim\n\n\nclass BudgetModel(Model):\n    \"\"\"Simple annual budget model tracking income, expenses, and net balance.\"\"\"\n\n    time = periods(2025, 2030)\n\n    # --- Income assumptions ---\n    base_salary = glob(120_000, doc=\"Base salary income ($/yr)\")\n    salary_growth = glob(0.04, doc=\"Annual salary growth rate\")\n    other_income = glob(12_000, doc=\"Other income per year (freelance, dividends, etc.)\")\n\n    # --- Expense assumptions ---\n    housing = glob(24_000, doc=\"Annual housing cost (rent/mortgage)\")\n    food = glob(7_200, doc=\"Annual food & groceries\")\n    transport = glob(4_800, doc=\"Annual transport cost\")\n    utilities = glob(2_400, doc=\"Annual utilities\")\n    entertainment = glob(3_600, doc=\"Annual entertainment & subscriptions\")\n    misc_expenses = glob(3_000, doc=\"Miscellaneous expenses\")\n    expense_growth = glob(0.03, doc=\"Annual expense inflation rate\")\n\n    # --- Rows ---\n\n    @row\n    def salary():\n        \"\"\"Salary income, growing each year ($).\"\"\"\n        salary[first] = base_salary\n        salary[n] = salary[n - 1] * (1 + salary_growth)\n\n    @row\n    def total_income():\n        \"\"\"Total income = salary + other income ($).\"\"\"\n        total_income[n] = salary[n] + other_income\n\n    @row\n    def fixed_expenses():\n        \"\"\"Fixed annual expenses, inflation-adjusted ($).\"\"\"\n        fixed_expenses[first] = (\n            housing + food + transport + utilities + entertainment + misc_expenses\n        )\n        fixed_expenses[n] = fixed_expenses[n - 1] * (1 + expense_growth)\n\n    @row\n    def total_expenses():\n        \"\"\"Total expenses ($).\"\"\"\n        total_expenses[n] = fixed_expenses[n]\n\n    @row\n    def net_budget():\n        \"\"\"Net budget surplus / (deficit) = income - expenses ($).\"\"\"\n        net_budget[n] = total_income[n] - total_expenses[n]\n\n    @row\n    def savings_rate():\n        \"\"\"Savings rate = net budget / total income (%).\"\"\"\n        savings_rate[n] = net_budget[n] / total_income[n]\n\n    @row\n    def cumulative_savings():\n        \"\"\"Cumulative savings over the planning horizon ($).\"\"\"\n        cumulative_savings[first] = net_budget[first]\n        cumulative_savings[n] = cumulative_savings[n - 1] + net_budget[n]\n"
+        },
+        {
+          "name": "cumulative_savings",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "net_budget"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "from sweet import Model, periods, glob, row, dim\n\n\nclass BudgetModel(Model):\n    \"\"\"Simple annual budget model tracking income, expenses, and net balance.\"\"\"\n\n    time = periods(2025, 2030)\n\n    # --- Income assumptions ---\n    base_salary = glob(120_000, doc=\"Base salary income ($/yr)\")\n    salary_growth = glob(0.04, doc=\"Annual salary growth rate\")\n    other_income = glob(12_000, doc=\"Other income per year (freelance, dividends, etc.)\")\n\n    # --- Expense assumptions ---\n    housing = glob(24_000, doc=\"Annual housing cost (rent/mortgage)\")\n    food = glob(7_200, doc=\"Annual food & groceries\")\n    transport = glob(4_800, doc=\"Annual transport cost\")\n    utilities = glob(2_400, doc=\"Annual utilities\")\n    entertainment = glob(3_600, doc=\"Annual entertainment & subscriptions\")\n    misc_expenses = glob(3_000, doc=\"Miscellaneous expenses\")\n    expense_growth = glob(0.03, doc=\"Annual expense inflation rate\")\n\n    # --- Rows ---\n\n    @row\n    def salary():\n        \"\"\"Salary income, growing each year ($).\"\"\"\n        salary[first] = base_salary\n        salary[n] = salary[n - 1] * (1 + salary_growth)\n\n    @row\n    def total_income():\n        \"\"\"Total income = salary + other income ($).\"\"\"\n        total_income[n] = salary[n] + other_income\n\n    @row\n    def fixed_expenses():\n        \"\"\"Fixed annual expenses, inflation-adjusted ($).\"\"\"\n        fixed_expenses[first] = (\n            housing + food + transport + utilities + entertainment + misc_expenses\n        )\n        fixed_expenses[n] = fixed_expenses[n - 1] * (1 + expense_growth)\n\n    @row\n    def total_expenses():\n        \"\"\"Total expenses ($).\"\"\"\n        total_expenses[n] = fixed_expenses[n]\n\n    @row\n    def net_budget():\n        \"\"\"Net budget surplus / (deficit) = income - expenses ($).\"\"\"\n        net_budget[n] = total_income[n] - total_expenses[n]\n\n    @row\n    def savings_rate():\n        \"\"\"Savings rate = net budget / total income (%).\"\"\"\n        savings_rate[n] = net_budget[n] / total_income[n]\n\n    @row\n    def cumulative_savings():\n        \"\"\"Cumulative savings over the planning horizon ($).\"\"\"\n        cumulative_savings[first] = net_budget[first]\n        cumulative_savings[n] = cumulative_savings[n - 1] + net_budget[n]\n"
+        }
+      ],
+      "scalars": [],
+      "dag": {
+        "nodes": [
+          {
+            "name": "base_salary",
+            "kind": "glob"
+          },
+          {
+            "name": "entertainment",
+            "kind": "glob"
+          },
+          {
+            "name": "expense_growth",
+            "kind": "glob"
+          },
+          {
+            "name": "food",
+            "kind": "glob"
+          },
+          {
+            "name": "housing",
+            "kind": "glob"
+          },
+          {
+            "name": "misc_expenses",
+            "kind": "glob"
+          },
+          {
+            "name": "other_income",
+            "kind": "glob"
+          },
+          {
+            "name": "salary_growth",
+            "kind": "glob"
+          },
+          {
+            "name": "transport",
+            "kind": "glob"
+          },
+          {
+            "name": "utilities",
+            "kind": "glob"
+          },
+          {
+            "name": "cumulative_savings",
+            "kind": "row"
+          },
+          {
+            "name": "fixed_expenses",
+            "kind": "row"
+          },
+          {
+            "name": "net_budget",
+            "kind": "row"
+          },
+          {
+            "name": "salary",
+            "kind": "row"
+          },
+          {
+            "name": "savings_rate",
+            "kind": "row"
+          },
+          {
+            "name": "total_expenses",
+            "kind": "row"
+          },
+          {
+            "name": "total_income",
+            "kind": "row"
+          }
+        ],
+        "edges": [
+          {
+            "from": "base_salary",
+            "to": "salary"
+          },
+          {
+            "from": "salary_growth",
+            "to": "salary"
+          },
+          {
+            "from": "other_income",
+            "to": "total_income"
+          },
+          {
+            "from": "salary",
+            "to": "total_income"
+          },
+          {
+            "from": "entertainment",
+            "to": "fixed_expenses"
+          },
+          {
+            "from": "expense_growth",
+            "to": "fixed_expenses"
+          },
+          {
+            "from": "food",
+            "to": "fixed_expenses"
+          },
+          {
+            "from": "housing",
+            "to": "fixed_expenses"
+          },
+          {
+            "from": "misc_expenses",
+            "to": "fixed_expenses"
+          },
+          {
+            "from": "transport",
+            "to": "fixed_expenses"
+          },
+          {
+            "from": "utilities",
+            "to": "fixed_expenses"
+          },
+          {
+            "from": "fixed_expenses",
+            "to": "total_expenses"
+          },
+          {
+            "from": "total_expenses",
+            "to": "net_budget"
+          },
+          {
+            "from": "total_income",
+            "to": "net_budget"
+          },
+          {
+            "from": "net_budget",
+            "to": "savings_rate"
+          },
+          {
+            "from": "total_income",
+            "to": "savings_rate"
+          },
+          {
+            "from": "net_budget",
+            "to": "cumulative_savings"
+          }
+        ]
+      },
+      "mermaid": "graph TD\n    base_salary([base_salary])\n    entertainment([entertainment])\n    expense_growth([expense_growth])\n    food([food])\n    housing([housing])\n    misc_expenses([misc_expenses])\n    other_income([other_income])\n    salary_growth([salary_growth])\n    transport([transport])\n    utilities([utilities])\n    cumulative_savings[cumulative_savings]\n    fixed_expenses[fixed_expenses]\n    net_budget[net_budget]\n    salary[salary]\n    savings_rate[savings_rate]\n    total_expenses[total_expenses]\n    total_income[total_income]\n    base_salary --> salary\n    salary_growth --> salary\n    other_income --> total_income\n    salary --> total_income\n    entertainment --> fixed_expenses\n    expense_growth --> fixed_expenses\n    food --> fixed_expenses\n    housing --> fixed_expenses\n    misc_expenses --> fixed_expenses\n    transport --> fixed_expenses\n    utilities --> fixed_expenses\n    fixed_expenses --> total_expenses\n    total_expenses --> net_budget\n    total_income --> net_budget\n    net_budget --> savings_rate\n    total_income --> savings_rate\n    net_budget --> cumulative_savings"
+    }
+  ],
+  "documentation": null
+}

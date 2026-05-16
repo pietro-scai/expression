@@ -35,6 +35,22 @@ class Budget(Model):
         return self.budget(t - 1) * (1 + self.growth_rate)
 
 
+MODULE_GROWTH_RATE = 0.07
+
+
+class ModuleGlobalBudget(Model):
+    time = periods(2024, 2025)
+
+    @row
+    def seed(self, t):
+        return 100
+
+    @row
+    def budget(self, t):
+        local_adjustment = 1
+        return self.seed(t) * (1 + MODULE_GROWTH_RATE) + local_adjustment + math.floor(0.1)
+
+
 def test_example_12_1_budget_solve():
     m = Budget()
     m.solve()
@@ -154,6 +170,17 @@ def test_glob_default_and_override():
     m.solve()
     series = m.series("budget")
     assert math.isclose(series[1], 120.0, rel_tol=1e-12)
+
+
+def test_describe_tracks_module_global_dependencies():
+    from sweet.output import describe_model
+
+    desc = describe_model(ModuleGlobalBudget())
+    model = desc["models"][0]
+    budget_def = next(r for r in model["rows"] if r["name"] == "budget")
+    assert set(budget_def["depends_on"]) == {"MODULE_GROWTH_RATE", "seed"}
+    assert {"name": "MODULE_GROWTH_RATE", "kind": "glob"} in model["dag"]["nodes"]
+    assert {"from": "MODULE_GROWTH_RATE", "to": "budget"} in model["dag"]["edges"]
 
 
 def test_periods_basic():

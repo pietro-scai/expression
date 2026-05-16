@@ -1,0 +1,301 @@
+{
+  "models": [
+    {
+      "model": {
+        "name": "BudgetModel",
+        "doc": "Simple annual budget model tracking income, expenses, and net balance.",
+        "axes": {
+          "time": {
+            "kind": "periods",
+            "values": [
+              2025,
+              2026,
+              2027,
+              2028,
+              2029,
+              2030
+            ]
+          }
+        }
+      },
+      "inputs": {
+        "base_salary": {
+          "value": 120000,
+          "default": 120000,
+          "type": "int",
+          "doc": "Base salary income ($/yr)"
+        },
+        "salary_growth": {
+          "value": 0.04,
+          "default": 0.04,
+          "type": "float",
+          "doc": "Annual salary growth rate"
+        },
+        "other_income": {
+          "value": 12000,
+          "default": 12000,
+          "type": "int",
+          "doc": "Other income per year (freelance, dividends, etc.)"
+        },
+        "housing": {
+          "value": 24000,
+          "default": 24000,
+          "type": "int",
+          "doc": "Annual housing cost (rent/mortgage)"
+        },
+        "food": {
+          "value": 7200,
+          "default": 7200,
+          "type": "int",
+          "doc": "Annual food & groceries"
+        },
+        "transport": {
+          "value": 4800,
+          "default": 4800,
+          "type": "int",
+          "doc": "Annual transport cost"
+        },
+        "utilities": {
+          "value": 2400,
+          "default": 2400,
+          "type": "int",
+          "doc": "Annual utilities"
+        },
+        "entertainment": {
+          "value": 3600,
+          "default": 3600,
+          "type": "int",
+          "doc": "Annual entertainment & subscriptions"
+        },
+        "misc_expenses": {
+          "value": 3000,
+          "default": 3000,
+          "type": "int",
+          "doc": "Miscellaneous expenses"
+        },
+        "expense_growth": {
+          "value": 0.03,
+          "default": 0.03,
+          "type": "float",
+          "doc": "Annual expense inflation rate"
+        }
+      },
+      "tables": [
+        {
+          "name": "salary",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "base_salary",
+            "salary_growth"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 120000,
+            "2026": 124800.0,
+            "2027": 129792.0,
+            "2028": 134983.68,
+            "2029": 140383.0272,
+            "2030": 145998.348288
+          }
+        },
+        {
+          "name": "total_income",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "other_income",
+            "salary"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 132000,
+            "2026": 136800.0,
+            "2027": 141792.0,
+            "2028": 146983.68,
+            "2029": 152383.0272,
+            "2030": 157998.348288
+          }
+        },
+        {
+          "name": "fixed_expenses",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "entertainment",
+            "expense_growth",
+            "food",
+            "housing",
+            "misc_expenses",
+            "transport",
+            "utilities"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 45000,
+            "2026": 46350.0,
+            "2027": 47740.5,
+            "2028": 49172.715000000004,
+            "2029": 50647.89645000001,
+            "2030": 52167.33334350001
+          }
+        },
+        {
+          "name": "total_expenses",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "fixed_expenses"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 45000,
+            "2026": 46350.0,
+            "2027": 47740.5,
+            "2028": 49172.715000000004,
+            "2029": 50647.89645000001,
+            "2030": 52167.33334350001
+          }
+        },
+        {
+          "name": "net_budget",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "total_expenses",
+            "total_income"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 87000,
+            "2026": 90450.0,
+            "2027": 94051.5,
+            "2028": 97810.965,
+            "2029": 101735.13075000001,
+            "2030": 105831.0149445
+          }
+        },
+        {
+          "name": "savings_rate",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "net_budget",
+            "total_income"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 0.6590909090909091,
+            "2026": 0.6611842105263158,
+            "2027": 0.6633061103588355,
+            "2028": 0.6654545933262795,
+            "2029": 0.667627705128042,
+            "2030": 0.6698235525322759
+          }
+        },
+        {
+          "name": "cumulative_savings",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "net_budget"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 87000,
+            "2026": 177450.0,
+            "2027": 271501.5,
+            "2028": 369312.46499999997,
+            "2029": 471047.59575,
+            "2030": 576878.6106944999
+          }
+        }
+      ],
+      "scalars": []
+    }
+  ]
+}
