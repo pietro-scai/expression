@@ -1,0 +1,876 @@
+{
+  "models": [
+    {
+      "name": "PortfolioModel",
+      "doc": "Per-company drawdown / distribution matrix.",
+      "axes": {
+        "time": {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030,
+            2031,
+            2032,
+            2033,
+            2034
+          ]
+        },
+        "companies": {
+          "kind": "dim",
+          "values": [
+            "Co1",
+            "Co2",
+            "Co3",
+            "Co4",
+            "Co5",
+            "Co6",
+            "Co7",
+            "Co8",
+            "Co9",
+            "Co10"
+          ]
+        }
+      },
+      "globals": {
+        "fund_size": {
+          "default": 35000,
+          "type": "int",
+          "doc": "Total fund size ($M)"
+        },
+        "n_cos": {
+          "default": 10,
+          "type": "int",
+          "doc": "Number of portfolio companies"
+        },
+        "pct_y1": {
+          "default": 0.5,
+          "type": "float",
+          "doc": "% of commitment called in investment year 1"
+        },
+        "pct_y2": {
+          "default": 0.3,
+          "type": "float",
+          "doc": "% of commitment called in investment year 2"
+        },
+        "pct_y3": {
+          "default": 0.2,
+          "type": "float",
+          "doc": "% of commitment called in investment year 3"
+        }
+      },
+      "rows": [
+        {
+          "name": "drawdown",
+          "kind": "row",
+          "doc": "Capital called per company ($M). Same J-curve schedule for all.",
+          "depends_on": [
+            "fund_size",
+            "n_cos",
+            "pct_y1",
+            "pct_y2",
+            "pct_y3"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Co1",
+                "Co2",
+                "Co3",
+                "Co4",
+                "Co5",
+                "Co6",
+                "Co7",
+                "Co8",
+                "Co9",
+                "Co10"
+              ]
+            }
+          ],
+          "source": "@row(over=[time, companies])\ndef drawdown(self, t, companies):\n    \"\"\"Capital called per company ($M). Same J-curve schedule for all.\"\"\"\n    alloc = self.fund_size / self.n_cos\n    if t == 2025:\n        return alloc * self.pct_y1\n    if t == 2026:\n        return alloc * self.pct_y2\n    if t == 2027:\n        return alloc * self.pct_y3\n    return 0.0\n"
+        },
+        {
+          "name": "distribution",
+          "kind": "row",
+          "doc": "Cash returned to LP per company at exit ($M).",
+          "depends_on": [
+            "EXIT_MAP",
+            "MOIC_MAP",
+            "fund_size",
+            "n_cos"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Co1",
+                "Co2",
+                "Co3",
+                "Co4",
+                "Co5",
+                "Co6",
+                "Co7",
+                "Co8",
+                "Co9",
+                "Co10"
+              ]
+            }
+          ],
+          "source": "@row(over=[time, companies])\ndef distribution(self, t, companies):\n    \"\"\"Cash returned to LP per company at exit ($M).\"\"\"\n    alloc = self.fund_size / self.n_cos\n    return alloc * MOIC_MAP[companies] if t == EXIT_MAP[companies] else 0.0\n"
+        },
+        {
+          "name": "moic_at_exit",
+          "kind": "row",
+          "doc": "Exit MOIC shown in exit year, 0 otherwise.",
+          "depends_on": [
+            "EXIT_MAP",
+            "MOIC_MAP"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Co1",
+                "Co2",
+                "Co3",
+                "Co4",
+                "Co5",
+                "Co6",
+                "Co7",
+                "Co8",
+                "Co9",
+                "Co10"
+              ]
+            }
+          ],
+          "source": "@row(over=[time, companies])\ndef moic_at_exit(self, t, companies):\n    \"\"\"Exit MOIC shown in exit year, 0 otherwise.\"\"\"\n    return MOIC_MAP[companies] if t == EXIT_MAP[companies] else 0.0\n"
+        },
+        {
+          "name": "irr_pct",
+          "kind": "row",
+          "doc": "Company IRR % shown in exit year, 0 otherwise.",
+          "depends_on": [
+            "EXIT_MAP",
+            "MOIC_MAP",
+            "fund_size",
+            "n_cos",
+            "pct_y1",
+            "pct_y2",
+            "pct_y3"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Co1",
+                "Co2",
+                "Co3",
+                "Co4",
+                "Co5",
+                "Co6",
+                "Co7",
+                "Co8",
+                "Co9",
+                "Co10"
+              ]
+            }
+          ],
+          "source": "@row(over=[time, companies])\ndef irr_pct(self, t, companies):\n    \"\"\"Company IRR % shown in exit year, 0 otherwise.\"\"\"\n    alloc = self.fund_size / self.n_cos\n    if t != EXIT_MAP[companies]:\n        return 0.0\n    flows = []\n    for yr in range(2025, 2035):\n        cf = 0.0\n        if yr == 2025:\n            cf -= alloc * self.pct_y1\n        if yr == 2026:\n            cf -= alloc * self.pct_y2\n        if yr == 2027:\n            cf -= alloc * self.pct_y3\n        if yr == EXIT_MAP[companies]:\n            cf += alloc * MOIC_MAP[companies]\n        flows.append(cf)\n    return _irr(flows)\n"
+        },
+        {
+          "name": "total_drawdown",
+          "kind": "row",
+          "doc": "Total drawdown across all companies ($M).",
+          "depends_on": [
+            "fund_size",
+            "pct_y1",
+            "pct_y2",
+            "pct_y3"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef total_drawdown(self, t):\n    \"\"\"Total drawdown across all companies ($M).\"\"\"\n    if t == 2025:\n        return self.fund_size * self.pct_y1\n    if t == 2026:\n        return self.fund_size * self.pct_y2\n    if t == 2027:\n        return self.fund_size * self.pct_y3\n    return 0.0\n"
+        },
+        {
+          "name": "total_distribution",
+          "kind": "row",
+          "doc": "Total distributions across all companies ($M).",
+          "depends_on": [
+            "COMPANIES",
+            "EXIT_MAP",
+            "MOIC_MAP",
+            "fund_size",
+            "n_cos"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef total_distribution(self, t):\n    \"\"\"Total distributions across all companies ($M).\"\"\"\n    alloc = self.fund_size / self.n_cos\n    return sum(alloc * MOIC_MAP[co] for co in COMPANIES if EXIT_MAP[co] == t)\n"
+        }
+      ],
+      "scalars": [],
+      "dag": {
+        "nodes": [
+          {
+            "name": "fund_size",
+            "kind": "glob"
+          },
+          {
+            "name": "n_cos",
+            "kind": "glob"
+          },
+          {
+            "name": "pct_y1",
+            "kind": "glob"
+          },
+          {
+            "name": "pct_y2",
+            "kind": "glob"
+          },
+          {
+            "name": "pct_y3",
+            "kind": "glob"
+          },
+          {
+            "name": "COMPANIES",
+            "kind": "glob"
+          },
+          {
+            "name": "EXIT_MAP",
+            "kind": "glob"
+          },
+          {
+            "name": "MOIC_MAP",
+            "kind": "glob"
+          },
+          {
+            "name": "distribution",
+            "kind": "row"
+          },
+          {
+            "name": "drawdown",
+            "kind": "row"
+          },
+          {
+            "name": "irr_pct",
+            "kind": "row"
+          },
+          {
+            "name": "moic_at_exit",
+            "kind": "row"
+          },
+          {
+            "name": "total_distribution",
+            "kind": "row"
+          },
+          {
+            "name": "total_drawdown",
+            "kind": "row"
+          }
+        ],
+        "edges": [
+          {
+            "from": "fund_size",
+            "to": "drawdown"
+          },
+          {
+            "from": "n_cos",
+            "to": "drawdown"
+          },
+          {
+            "from": "pct_y1",
+            "to": "drawdown"
+          },
+          {
+            "from": "pct_y2",
+            "to": "drawdown"
+          },
+          {
+            "from": "pct_y3",
+            "to": "drawdown"
+          },
+          {
+            "from": "EXIT_MAP",
+            "to": "distribution"
+          },
+          {
+            "from": "MOIC_MAP",
+            "to": "distribution"
+          },
+          {
+            "from": "fund_size",
+            "to": "distribution"
+          },
+          {
+            "from": "n_cos",
+            "to": "distribution"
+          },
+          {
+            "from": "EXIT_MAP",
+            "to": "moic_at_exit"
+          },
+          {
+            "from": "MOIC_MAP",
+            "to": "moic_at_exit"
+          },
+          {
+            "from": "EXIT_MAP",
+            "to": "irr_pct"
+          },
+          {
+            "from": "MOIC_MAP",
+            "to": "irr_pct"
+          },
+          {
+            "from": "fund_size",
+            "to": "irr_pct"
+          },
+          {
+            "from": "n_cos",
+            "to": "irr_pct"
+          },
+          {
+            "from": "pct_y1",
+            "to": "irr_pct"
+          },
+          {
+            "from": "pct_y2",
+            "to": "irr_pct"
+          },
+          {
+            "from": "pct_y3",
+            "to": "irr_pct"
+          },
+          {
+            "from": "fund_size",
+            "to": "total_drawdown"
+          },
+          {
+            "from": "pct_y1",
+            "to": "total_drawdown"
+          },
+          {
+            "from": "pct_y2",
+            "to": "total_drawdown"
+          },
+          {
+            "from": "pct_y3",
+            "to": "total_drawdown"
+          },
+          {
+            "from": "COMPANIES",
+            "to": "total_distribution"
+          },
+          {
+            "from": "EXIT_MAP",
+            "to": "total_distribution"
+          },
+          {
+            "from": "MOIC_MAP",
+            "to": "total_distribution"
+          },
+          {
+            "from": "fund_size",
+            "to": "total_distribution"
+          },
+          {
+            "from": "n_cos",
+            "to": "total_distribution"
+          }
+        ]
+      },
+      "mermaid": "graph TD\n    fund_size([fund_size])\n    n_cos([n_cos])\n    pct_y1([pct_y1])\n    pct_y2([pct_y2])\n    pct_y3([pct_y3])\n    COMPANIES([COMPANIES])\n    EXIT_MAP([EXIT_MAP])\n    MOIC_MAP([MOIC_MAP])\n    distribution[distribution]\n    drawdown[drawdown]\n    irr_pct[irr_pct]\n    moic_at_exit[moic_at_exit]\n    total_distribution[total_distribution]\n    total_drawdown[total_drawdown]\n    fund_size --> drawdown\n    n_cos --> drawdown\n    pct_y1 --> drawdown\n    pct_y2 --> drawdown\n    pct_y3 --> drawdown\n    EXIT_MAP --> distribution\n    MOIC_MAP --> distribution\n    fund_size --> distribution\n    n_cos --> distribution\n    EXIT_MAP --> moic_at_exit\n    MOIC_MAP --> moic_at_exit\n    EXIT_MAP --> irr_pct\n    MOIC_MAP --> irr_pct\n    fund_size --> irr_pct\n    n_cos --> irr_pct\n    pct_y1 --> irr_pct\n    pct_y2 --> irr_pct\n    pct_y3 --> irr_pct\n    fund_size --> total_drawdown\n    pct_y1 --> total_drawdown\n    pct_y2 --> total_drawdown\n    pct_y3 --> total_drawdown\n    COMPANIES --> total_distribution\n    EXIT_MAP --> total_distribution\n    MOIC_MAP --> total_distribution\n    fund_size --> total_distribution\n    n_cos --> total_distribution"
+    },
+    {
+      "name": "FundModel",
+      "doc": "Fund-level simulation: fees, NAV, cumulative MOIC and IRR.",
+      "axes": {
+        "time": {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030,
+            2031,
+            2032,
+            2033,
+            2034
+          ]
+        }
+      },
+      "globals": {
+        "fund_size": {
+          "default": 35000,
+          "type": "int",
+          "doc": "Total fund size ($M)"
+        },
+        "mgmt_fee_pct": {
+          "default": 0.015,
+          "type": "float",
+          "doc": "Annual mgmt fee % of committed capital"
+        }
+      },
+      "rows": [
+        {
+          "name": "drawn",
+          "kind": "row",
+          "doc": "Capital called from LPs each year ($M).",
+          "depends_on": [
+            "portfolio"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef drawn(self, t):\n    \"\"\"Capital called from LPs each year ($M).\"\"\"\n    return self.portfolio.total_drawdown(t)\n"
+        },
+        {
+          "name": "distributed",
+          "kind": "row",
+          "doc": "Cash returned to LPs each year ($M).",
+          "depends_on": [
+            "portfolio"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef distributed(self, t):\n    \"\"\"Cash returned to LPs each year ($M).\"\"\"\n    return self.portfolio.total_distribution(t)\n"
+        },
+        {
+          "name": "mgmt_fee",
+          "kind": "row",
+          "doc": "Annual management fee ($M).",
+          "depends_on": [
+            "fund_size",
+            "mgmt_fee_pct"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef mgmt_fee(self, t):\n    \"\"\"Annual management fee ($M).\"\"\"\n    return self.fund_size * self.mgmt_fee_pct\n"
+        },
+        {
+          "name": "net_cf",
+          "kind": "row",
+          "doc": "Net fund cash flow after fees ($M). Negative = LP outflow.",
+          "depends_on": [
+            "fund_size",
+            "mgmt_fee_pct",
+            "portfolio"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef net_cf(self, t):\n    \"\"\"Net fund cash flow after fees ($M). Negative = LP outflow.\"\"\"\n    return (\n        self.portfolio.total_distribution(t)\n        - self.portfolio.total_drawdown(t)\n        - self.fund_size * self.mgmt_fee_pct\n    )\n"
+        },
+        {
+          "name": "cum_drawn",
+          "kind": "row",
+          "doc": "Cumulative capital called ($M).",
+          "depends_on": [
+            "portfolio"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef cum_drawn(self, t):\n    \"\"\"Cumulative capital called ($M).\"\"\"\n    return sum(self.portfolio.total_drawdown(yr) for yr in range(2025, t + 1))\n"
+        },
+        {
+          "name": "cum_distributed",
+          "kind": "row",
+          "doc": "Cumulative distributions ($M).",
+          "depends_on": [
+            "portfolio"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef cum_distributed(self, t):\n    \"\"\"Cumulative distributions ($M).\"\"\"\n    return sum(self.portfolio.total_distribution(yr) for yr in range(2025, t + 1))\n"
+        },
+        {
+          "name": "nav",
+          "kind": "row",
+          "doc": "NAV = cumulative drawn - cumulative distributed ($M).",
+          "depends_on": [
+            "cum_distributed",
+            "cum_drawn"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef nav(self, t):\n    \"\"\"NAV = cumulative drawn - cumulative distributed ($M).\"\"\"\n    return self.cum_drawn(t) - self.cum_distributed(t)\n"
+        },
+        {
+          "name": "fund_moic",
+          "kind": "row",
+          "doc": "Cumulative MOIC = total distributed / total drawn.",
+          "depends_on": [
+            "cum_distributed",
+            "cum_drawn"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef fund_moic(self, t):\n    \"\"\"Cumulative MOIC = total distributed / total drawn.\"\"\"\n    cd = self.cum_drawn(t)\n    return round(self.cum_distributed(t) / cd, 2) if cd else 0.0\n"
+        },
+        {
+          "name": "fund_irr",
+          "kind": "row",
+          "doc": "Fund IRR % on net cash flows to date (0 before first exit in 2029).",
+          "depends_on": [
+            "fund_size",
+            "mgmt_fee_pct",
+            "portfolio"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030,
+                2031,
+                2032,
+                2033,
+                2034
+              ]
+            }
+          ],
+          "source": "@row\ndef fund_irr(self, t):\n    \"\"\"Fund IRR % on net cash flows to date (0 before first exit in 2029).\"\"\"\n    if t < 2029:\n        return 0.0\n    flows = [\n        self.portfolio.total_distribution(yr)\n        - self.portfolio.total_drawdown(yr)\n        - self.fund_size * self.mgmt_fee_pct\n        for yr in range(2025, t + 1)\n    ]\n    return _irr(flows)\n"
+        }
+      ],
+      "scalars": [],
+      "dag": {
+        "nodes": [
+          {
+            "name": "fund_size",
+            "kind": "glob"
+          },
+          {
+            "name": "mgmt_fee_pct",
+            "kind": "glob"
+          },
+          {
+            "name": "portfolio",
+            "kind": "depends",
+            "upstream": "PortfolioModel"
+          },
+          {
+            "name": "cum_distributed",
+            "kind": "row"
+          },
+          {
+            "name": "cum_drawn",
+            "kind": "row"
+          },
+          {
+            "name": "distributed",
+            "kind": "row"
+          },
+          {
+            "name": "drawn",
+            "kind": "row"
+          },
+          {
+            "name": "fund_irr",
+            "kind": "row"
+          },
+          {
+            "name": "fund_moic",
+            "kind": "row"
+          },
+          {
+            "name": "mgmt_fee",
+            "kind": "row"
+          },
+          {
+            "name": "nav",
+            "kind": "row"
+          },
+          {
+            "name": "net_cf",
+            "kind": "row"
+          }
+        ],
+        "edges": [
+          {
+            "from": "portfolio",
+            "to": "drawn"
+          },
+          {
+            "from": "portfolio",
+            "to": "distributed"
+          },
+          {
+            "from": "fund_size",
+            "to": "mgmt_fee"
+          },
+          {
+            "from": "mgmt_fee_pct",
+            "to": "mgmt_fee"
+          },
+          {
+            "from": "fund_size",
+            "to": "net_cf"
+          },
+          {
+            "from": "mgmt_fee_pct",
+            "to": "net_cf"
+          },
+          {
+            "from": "portfolio",
+            "to": "net_cf"
+          },
+          {
+            "from": "portfolio",
+            "to": "cum_drawn"
+          },
+          {
+            "from": "portfolio",
+            "to": "cum_distributed"
+          },
+          {
+            "from": "cum_distributed",
+            "to": "nav"
+          },
+          {
+            "from": "cum_drawn",
+            "to": "nav"
+          },
+          {
+            "from": "cum_distributed",
+            "to": "fund_moic"
+          },
+          {
+            "from": "cum_drawn",
+            "to": "fund_moic"
+          },
+          {
+            "from": "fund_size",
+            "to": "fund_irr"
+          },
+          {
+            "from": "mgmt_fee_pct",
+            "to": "fund_irr"
+          },
+          {
+            "from": "portfolio",
+            "to": "fund_irr"
+          }
+        ]
+      },
+      "mermaid": "graph TD\n    fund_size([fund_size])\n    mgmt_fee_pct([mgmt_fee_pct])\n    portfolio[/portfolio/]\n    cum_distributed[cum_distributed]\n    cum_drawn[cum_drawn]\n    distributed[distributed]\n    drawn[drawn]\n    fund_irr[fund_irr]\n    fund_moic[fund_moic]\n    mgmt_fee[mgmt_fee]\n    nav[nav]\n    net_cf[net_cf]\n    portfolio --> drawn\n    portfolio --> distributed\n    fund_size --> mgmt_fee\n    mgmt_fee_pct --> mgmt_fee\n    fund_size --> net_cf\n    mgmt_fee_pct --> net_cf\n    portfolio --> net_cf\n    portfolio --> cum_drawn\n    portfolio --> cum_distributed\n    cum_distributed --> nav\n    cum_drawn --> nav\n    cum_distributed --> fund_moic\n    cum_drawn --> fund_moic\n    fund_size --> fund_irr\n    mgmt_fee_pct --> fund_irr\n    portfolio --> fund_irr"
+    }
+  ],
+  "documentation": null
+}

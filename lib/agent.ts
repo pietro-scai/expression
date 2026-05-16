@@ -151,7 +151,18 @@ STRICT TYPE RULES — violating these causes a runtime error:
    CORRECT:   time = periods(2025, 2030)
    WRONG:     time = periods("2025-01", "2025-12")  ← crashes
 
-2. @row is a bare decorator — no arguments, no doc=.
+2. Use bare @row only for one-dimensional time rows. For multi-dimensional rows,
+   declare every axis explicitly with @row(over=[...]) and make the function
+   parameters match that order exactly.
+   CORRECT:
+       products = dim(["A", "B"])
+       time = periods(2025, 2030)
+       @row(over=[time, products])
+       def revenue(self, t, products):
+           return ...
+   WRONG:
+       @row
+       def revenue(self, t, products): ...  ← crashes; solver passes only t
    WRONG:  @row(doc="...")  ← crashes
 
 3. All globs MUST have doc=:  seed = glob(100, doc="Starting value ($K)")
@@ -173,6 +184,8 @@ STRICT TYPE RULES — violating these causes a runtime error:
        @row
        def gross_income(self, t):
            return self.salary.total_comp(t) + self.other_income
+   Multi-dimensional rows currently use Layer-1 with @row(over=[...]), not
+   Layer-2 sugar.
 
 5. Always name depends() at class level — never call it inline inside a @row body.
    Accessing self.<dep_name> on an instance returns the solved upstream Model directly.
@@ -189,6 +202,11 @@ STRICT TYPE RULES — violating these causes a runtime error:
 6. A single sweet.py can contain multiple Model subclasses. sweet run discovers all of them,
    auto-resolves their dependency order via depends(), and solves them all.
    Circular cross-model deps raise a clear error.
+
+7. Avoid optional heavy Python dependencies inside model formulas unless already installed
+   in /tmp/sweet-venv. The default sandbox installs sweet's core deps only
+   (networkx, openpyxl, typer). Prefer stdlib implementations for small helpers
+   like IRR/root finding, or explicitly install the package before relying on it.
 
 WORKFLOW
 1. Ask the user what to model: business question, time horizon, key drivers, outputs.

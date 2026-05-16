@@ -15,6 +15,11 @@ answers their question (revenue forecast, NPV, etc.). Start at the leaves:
    each row.
 5. Compose upward toward the user's headline number.
 
+When a row varies by a categorical axis, define the `dim(...)` first and use
+`@row(over=[...])`; a bare `@row` with extra function arguments will fail at
+solve time. Prefer stdlib math/helpers in formulas unless the workspace has
+explicitly installed an optional dependency such as SciPy.
+
 Reasoning: bottom-up forces the user to surface every assumption explicitly.
 A top-down sketch tends to leave hidden plug numbers in formulas — exactly
 the thing `model` exists to eliminate.

@@ -563,6 +563,16 @@ class Pricing(Model):
         return base_price_eur[p] * fx.lookup("EUR", "USD", at=t)
 ```
 
+Any row with extra axis arguments must declare those axes in `@row(over=[...])`
+in the same order as the function parameters. Bare `@row` is only for rows
+over the model's `time` axis; `def drawdown(self, t, company)` with bare
+`@row` will fail because the solver passes only `t`.
+
+Examples should avoid optional heavy runtime dependencies unless they are
+declared and installed by the workspace. Prefer stdlib helpers for small
+financial math routines such as IRR/root finding, or explicitly add the
+dependency before importing packages such as SciPy.
+
 ### 12.5 Example 5 — Investment with IRR / NPV / payback
 
 ```python

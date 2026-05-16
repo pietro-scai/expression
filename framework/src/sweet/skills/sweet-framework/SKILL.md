@@ -56,6 +56,28 @@ topological order — no entry-point designation needed.
 Most operations key off `sweet.py` in the cwd. If the user is in a
 subdirectory or has a non-default name, pass `--model path/to/sweet.py`.
 
+## 2.1 Modeling guardrails
+
+- **Use `@row(over=[...])` for every multi-dimensional row.** If a row
+  function has extra axis arguments such as `(self, t, company)`, bare
+  `@row` is wrong: the solver will call it with only `t`. Declare the axes
+  explicitly and keep the order in `over=` identical to the function
+  signature:
+
+  ```python
+  companies = dim(["Co1", "Co2"])
+  time = periods(2025, 2030)
+
+  @row(over=[time, companies])
+  def drawdown(self, t, company):
+      ...
+  ```
+
+- **Do not rely on optional heavy dependencies unless installed.** The
+  default framework environment includes the core dependencies, not packages
+  like SciPy. Prefer small stdlib helpers for IRR/root-finding examples, or
+  install and record the dependency before using it in model code.
+
 ## 3. CLI surface
 
 | Command | What it does |

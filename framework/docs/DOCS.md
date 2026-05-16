@@ -544,6 +544,11 @@ class Pricing(Model):
 
 The framework iterates the cartesian product of the declared axes and caches per `(row_name, *idx)`. Order of axes in `over=` is the order of the function's positional arguments.
 
+Bare `@row` is only for one-dimensional time rows. If the function signature
+has any extra axis argument, for example `def drawdown(self, t, company)`, it
+must use `@row(over=[time, companies])`; otherwise the solver calls it with
+only `t` and the model fails before writing `outputs/result.json`.
+
 For multi-dim cells, `model.cell("revenue", ("A", "EU", 2024))` (tuple) returns the value.
 
 ---
@@ -1156,6 +1161,12 @@ from sweet import (
 | `dataset.from_row(model, row, columns=…)` | Build a `Dataset` from a solved row. |
 | `xl.<fn>` | Excel-flavoured function library. |
 | `xl.register` / `register` | Add a function to the `xl` namespace. |
+
+Formula helpers should use the Python standard library unless the workspace
+explicitly installs an optional package. The default framework environment
+does not include heavy dependencies such as SciPy, so examples that need IRR
+or root-finding should either use a small local helper or declare/install the
+dependency first.
 
 ### Layer-2 sugar (inside `@row` / `@scalar` with no positional args)
 
