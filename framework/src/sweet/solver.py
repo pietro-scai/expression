@@ -57,8 +57,9 @@ def build_dag(model: Model) -> nx.DiGraph:
     g: nx.DiGraph = nx.DiGraph()
     rows = model._rows  # pyright: ignore[reportPrivateUsage]
     scalars = model._scalars  # pyright: ignore[reportPrivateUsage]
-    known = set(rows) | set(scalars)
-    for name in known:
+    dep_models = model._depends  # pyright: ignore[reportPrivateUsage]
+    known = set(rows) | set(scalars) | set(dep_models)
+    for name in set(rows) | set(scalars):
         g.add_node(name)
     for name, row_obj in rows.items():
         deps = (

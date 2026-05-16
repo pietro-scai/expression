@@ -1,189 +1,450 @@
 {
-  "model": {
-    "name": "SalaryModel",
-    "doc": null,
-    "axes": {
-      "time": {
-        "kind": "periods",
-        "values": [
-          2025,
-          2026,
-          2027,
-          2028,
-          2029,
-          2030
-        ]
-      }
+  "models": [
+    {
+      "model": {
+        "name": "SalaryModel",
+        "doc": "Detailed salary breakdown feeding into the household budget.",
+        "axes": {
+          "time": {
+            "kind": "periods",
+            "values": [
+              2025,
+              2026,
+              2027,
+              2028,
+              2029,
+              2030
+            ]
+          }
+        }
+      },
+      "inputs": {
+        "base_salary": {
+          "value": 100000,
+          "default": 100000,
+          "type": "int",
+          "doc": "Starting base salary ($)"
+        },
+        "salary_increase": {
+          "value": 0.03,
+          "default": 0.03,
+          "type": "float",
+          "doc": "Annual base salary increase rate"
+        },
+        "bonus_rate": {
+          "value": 0.1,
+          "default": 0.1,
+          "type": "float",
+          "doc": "Annual bonus as a fraction of base salary"
+        },
+        "extra_bonus": {
+          "value": 5000,
+          "default": 5000,
+          "type": "int",
+          "doc": "Extra bonus paid every two years ($)"
+        }
+      },
+      "tables": [
+        {
+          "name": "base",
+          "kind": "row",
+          "doc": "Base salary after annual increases ($).",
+          "depends_on": [
+            "base_salary",
+            "salary_increase"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 100000,
+            "2026": 103000.0,
+            "2027": 106090.0,
+            "2028": 109272.7,
+            "2029": 112550.881,
+            "2030": 115927.40742999999
+          }
+        },
+        {
+          "name": "bonus",
+          "kind": "row",
+          "doc": "Annual performance bonus ($).",
+          "depends_on": [
+            "base",
+            "bonus_rate"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 10000.0,
+            "2026": 10300.0,
+            "2027": 10609.0,
+            "2028": 10927.27,
+            "2029": 11255.0881,
+            "2030": 11592.740743
+          }
+        },
+        {
+          "name": "extra_bonus_payment",
+          "kind": "row",
+          "doc": "Extra bonus paid every two years \u2014 odd years from start ($).",
+          "depends_on": [
+            "extra_bonus"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 0,
+            "2026": 5000,
+            "2027": 0,
+            "2028": 5000,
+            "2029": 0,
+            "2030": 5000
+          }
+        },
+        {
+          "name": "total_compensation",
+          "kind": "row",
+          "doc": "Total gross compensation: base + bonus + extra bonus ($).",
+          "depends_on": [
+            "base",
+            "bonus",
+            "extra_bonus_payment"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 110000.0,
+            "2026": 118300.0,
+            "2027": 116699.0,
+            "2028": 125199.97,
+            "2029": 123805.96909999999,
+            "2030": 132520.148173
+          }
+        }
+      ],
+      "scalars": []
+    },
+    {
+      "model": {
+        "name": "HouseholdBudget",
+        "doc": "Annual household budget, driven by SalaryModel for income.",
+        "axes": {
+          "time": {
+            "kind": "periods",
+            "values": [
+              2025,
+              2026,
+              2027,
+              2028,
+              2029,
+              2030
+            ]
+          }
+        }
+      },
+      "inputs": {
+        "housing_cost": {
+          "value": 18000,
+          "default": 18000,
+          "type": "int",
+          "doc": "Annual housing cost \u2014 rent/mortgage ($)"
+        },
+        "groceries": {
+          "value": 7200,
+          "default": 7200,
+          "type": "int",
+          "doc": "Annual grocery spending ($)"
+        },
+        "transport": {
+          "value": 5400,
+          "default": 5400,
+          "type": "int",
+          "doc": "Annual transport cost ($)"
+        },
+        "utilities": {
+          "value": 2400,
+          "default": 2400,
+          "type": "int",
+          "doc": "Annual utilities ($)"
+        },
+        "entertainment": {
+          "value": 3000,
+          "default": 3000,
+          "type": "int",
+          "doc": "Annual entertainment & dining ($)"
+        },
+        "expense_inflation": {
+          "value": 0.025,
+          "default": 0.025,
+          "type": "float",
+          "doc": "Annual expense inflation rate"
+        },
+        "tax_rate": {
+          "value": 0.22,
+          "default": 0.22,
+          "type": "float",
+          "doc": "Effective income tax rate"
+        }
+      },
+      "tables": [
+        {
+          "name": "gross_income",
+          "kind": "row",
+          "doc": "Gross household income \u2014 sourced from SalaryModel ($).",
+          "depends_on": [
+            "salary"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 110000.0,
+            "2026": 118300.0,
+            "2027": 116699.0,
+            "2028": 125199.97,
+            "2029": 123805.96909999999,
+            "2030": 132520.148173
+          }
+        },
+        {
+          "name": "taxes",
+          "kind": "row",
+          "doc": "Income taxes paid ($).",
+          "depends_on": [
+            "gross_income",
+            "tax_rate"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 24200.0,
+            "2026": 26026.0,
+            "2027": 25673.78,
+            "2028": 27543.9934,
+            "2029": 27237.313201999998,
+            "2030": 29154.43259806
+          }
+        },
+        {
+          "name": "net_income",
+          "kind": "row",
+          "doc": "Take-home pay after taxes ($).",
+          "depends_on": [
+            "gross_income",
+            "taxes"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 85800.0,
+            "2026": 92274.0,
+            "2027": 91025.22,
+            "2028": 97655.9766,
+            "2029": 96568.655898,
+            "2030": 103365.71557494
+          }
+        },
+        {
+          "name": "total_expenses",
+          "kind": "row",
+          "doc": "Total annual household expenses ($).",
+          "depends_on": [
+            "entertainment",
+            "expense_inflation",
+            "groceries",
+            "housing_cost",
+            "transport",
+            "utilities"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 36000,
+            "2026": 36900.0,
+            "2027": 37822.5,
+            "2028": 38768.0625,
+            "2029": 39737.2640625,
+            "2030": 40730.69566406249
+          }
+        },
+        {
+          "name": "net_savings",
+          "kind": "row",
+          "doc": "Annual net savings ($).",
+          "depends_on": [
+            "net_income",
+            "total_expenses"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 49800.0,
+            "2026": 55374.0,
+            "2027": 53202.72,
+            "2028": 58887.914099999995,
+            "2029": 56831.3918355,
+            "2030": 62635.019910877505
+          }
+        },
+        {
+          "name": "savings_rate",
+          "kind": "row",
+          "doc": "Savings as a share of net income (%).",
+          "depends_on": [
+            "net_income",
+            "net_savings"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 0.5804195804195804,
+            "2026": 0.6001040379738605,
+            "2027": 0.5844832893565102,
+            "2028": 0.6030139285914426,
+            "2029": 0.5885076405695009,
+            "2030": 0.605955461755278
+          }
+        },
+        {
+          "name": "cumulative_savings",
+          "kind": "row",
+          "doc": "Running total of savings accumulated ($).",
+          "depends_on": [
+            "net_savings"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 49800.0,
+            "2026": 105174.0,
+            "2027": 158376.72,
+            "2028": 217264.6341,
+            "2029": 274096.0259355,
+            "2030": 336731.0458463775
+          }
+        }
+      ],
+      "scalars": []
     }
-  },
-  "inputs": {
-    "base_salary": {
-      "value": 55000.0,
-      "default": 55000.0,
-      "type": "float",
-      "doc": "Annual gross base salary (\u20ac)"
-    },
-    "annual_raise": {
-      "value": 0.03,
-      "default": 0.03,
-      "type": "float",
-      "doc": "Annual raise rate"
-    },
-    "bonus_rate": {
-      "value": 0.1,
-      "default": 0.1,
-      "type": "float",
-      "doc": "Bonus as fraction of gross salary"
-    },
-    "side_income": {
-      "value": 3000.0,
-      "default": 3000.0,
-      "type": "float",
-      "doc": "Annual side income \u2014 freelance, consulting (\u20ac)"
-    },
-    "tax_rate": {
-      "value": 0.38,
-      "default": 0.38,
-      "type": "float",
-      "doc": "Effective income tax + social contributions rate"
-    }
-  },
-  "tables": [
-    {
-      "name": "gross_salary",
-      "kind": "row",
-      "doc": null,
-      "depends_on": [],
-      "columns": [
-        {
-          "kind": "periods",
-          "values": [
-            2025,
-            2026,
-            2027,
-            2028,
-            2029,
-            2030
-          ]
-        }
-      ],
-      "results": {
-        "2025": 55000.0,
-        "2026": 56650.0,
-        "2027": 58349.5,
-        "2028": 60099.985,
-        "2029": 61902.98455,
-        "2030": 63760.074086500004
-      }
-    },
-    {
-      "name": "bonus",
-      "kind": "row",
-      "doc": null,
-      "depends_on": [],
-      "columns": [
-        {
-          "kind": "periods",
-          "values": [
-            2025,
-            2026,
-            2027,
-            2028,
-            2029,
-            2030
-          ]
-        }
-      ],
-      "results": {
-        "2025": 5500.0,
-        "2026": 5665.0,
-        "2027": 5834.950000000001,
-        "2028": 6009.998500000001,
-        "2029": 6190.298455,
-        "2030": 6376.007408650001
-      }
-    },
-    {
-      "name": "gross_income",
-      "kind": "row",
-      "doc": null,
-      "depends_on": [],
-      "columns": [
-        {
-          "kind": "periods",
-          "values": [
-            2025,
-            2026,
-            2027,
-            2028,
-            2029,
-            2030
-          ]
-        }
-      ],
-      "results": {
-        "2025": 63500.0,
-        "2026": 65315.0,
-        "2027": 67184.45,
-        "2028": 69109.9835,
-        "2029": 71093.283005,
-        "2030": 73136.08149515
-      }
-    },
-    {
-      "name": "tax",
-      "kind": "row",
-      "doc": null,
-      "depends_on": [],
-      "columns": [
-        {
-          "kind": "periods",
-          "values": [
-            2025,
-            2026,
-            2027,
-            2028,
-            2029,
-            2030
-          ]
-        }
-      ],
-      "results": {
-        "2025": 24130.0,
-        "2026": 24819.7,
-        "2027": 25530.091,
-        "2028": 26261.79373,
-        "2029": 27015.4475419,
-        "2030": 27791.710968157004
-      }
-    },
-    {
-      "name": "net_income",
-      "kind": "row",
-      "doc": null,
-      "depends_on": [],
-      "columns": [
-        {
-          "kind": "periods",
-          "values": [
-            2025,
-            2026,
-            2027,
-            2028,
-            2029,
-            2030
-          ]
-        }
-      ],
-      "results": {
-        "2025": 39370.0,
-        "2026": 40495.3,
-        "2027": 41654.359,
-        "2028": 42848.18977,
-        "2029": 44077.835463100004,
-        "2030": 45344.37052699301
-      }
-    }
-  ],
-  "scalars": []
+  ]
 }

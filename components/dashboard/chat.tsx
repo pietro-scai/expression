@@ -139,7 +139,7 @@ function SandboxStatusBar({ onReinitiate }: { onReinitiate: () => void }) {
       {isOffline ? (
         <span className="font-medium">Sandbox timed out</span>
       ) : sandboxId ? (
-        <span className="font-mono">{sandboxId.slice(0, 8)}…</span>
+        <span className="font-mono">{sandboxId}</span>
       ) : (
         <span>No sandbox</span>
       )}
@@ -169,7 +169,7 @@ function SandboxStatusBar({ onReinitiate }: { onReinitiate: () => void }) {
 }
 
 export function DashboardChat() {
-  const { setSnapshot } = useModel();
+  const { setSnapshot, setAllSnapshots } = useModel();
   const { setSandbox, setStatus, clear } = useSandboxStore();
 
   // Always read from the store at call time — never from a stale closure.
@@ -243,7 +243,12 @@ export function DashboardChat() {
 
         const name = getToolName(part);
         if (PANEL_TOOLS.has(name)) {
-          setSnapshot(part.output as ModelSnapshot);
+          const output = part.output;
+          if (Array.isArray(output)) {
+            setAllSnapshots(output as ModelSnapshot[]);
+          } else {
+            setSnapshot(output as ModelSnapshot);
+          }
           return;
         }
       }

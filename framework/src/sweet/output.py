@@ -55,9 +55,20 @@ def _format_period_key(idx: tuple[Any, ...]) -> str:
     return ",".join(str(x) for x in idx)
 
 
+def _known(model: Model) -> set[str]:
+    cls = type(model)
+    return (
+        set(cls._rows)
+        | set(cls._scalars)
+        | set(cls._globs)
+        | set(cls._depends)  # pyright: ignore[reportPrivateUsage]
+    )
+
+
 def _row_entries(model: Model) -> list[dict[str, Any]]:
     cls = type(model)
     cells = model._cells  # pyright: ignore[reportPrivateUsage]
+    known = _known(model)
     tables: list[dict[str, Any]] = []
     for name, r in cls._rows.items():
         if r.over is not None:
@@ -70,12 +81,11 @@ def _row_entries(model: Model) -> list[dict[str, Any]]:
             if row_name != name:
                 continue
             results[_format_period_key(tuple(idx))] = value
-        deps = sorted(r.explicit_deps) if r.explicit_deps else []
         tables.append({
             "name": name,
             "kind": "row",
             "doc": inspect.getdoc(r.fn),
-            "depends_on": deps,
+            "depends_on": _node_deps(name, r.fn, known, r.explicit_deps),
             "columns": columns,
             "results": results,
         })
@@ -85,15 +95,15 @@ def _row_entries(model: Model) -> list[dict[str, Any]]:
 def _scalar_entries(model: Model) -> list[dict[str, Any]]:
     cls = type(model)
     cells = model._cells  # pyright: ignore[reportPrivateUsage]
+    known = _known(model)
     scalars: list[dict[str, Any]] = []
     for name, s in cls._scalars.items():
         value = cells.get((name, None))
-        deps = sorted(s.explicit_deps) if s.explicit_deps else []
         scalars.append({
             "name": name,
             "kind": "scalar",
             "doc": inspect.getdoc(s.fn),
-            "depends_on": deps,
+            "depends_on": _node_deps(name, s.fn, known, s.explicit_deps),
             "type": _type_name(value),
             "value": value,
         })
@@ -124,18 +134,21 @@ def _node_deps(name: str, fn: Any, known: set[str], explicit: set[str] | None) -
 
 
 def _build_dag(model: Model) -> dict[str, Any]:
-    """Variable-level DAG: globs feed rows/scalars; rows/scalars feed each other.
+    """Variable-level DAG: globs/depends feed rows/scalars; rows/scalars feed each other.
 
-    Globals appear as nodes (sources) so the diagram shows which inputs
-    drive which derived values.
+    Globals and cross-model depends() appear as source nodes so the diagram
+    shows the full data-flow into derived values.
     """
     cls = type(model)
     rows = cls._rows
     scalars = cls._scalars
     globs = cls._globs
-    known = set(rows) | set(scalars) | set(globs)
+    dep_models = cls._depends  # pyright: ignore[reportPrivateUsage]
+    known = set(rows) | set(scalars) | set(globs) | set(dep_models)
     nodes = [
         {"name": n, "kind": "glob"} for n in sorted(globs)
+    ] + [
+        {"name": n, "kind": "depends"} for n in sorted(dep_models)
     ] + [
         {"name": n, "kind": "row"} for n in sorted(rows)
     ] + [
@@ -164,6 +177,8 @@ def _to_mermaid(dag: dict[str, Any]) -> str:
             lines.append(f"    {n}([{n}])")
         elif kind == "scalar":
             lines.append(f"    {n}(({n}))")
+        elif kind == "depends":
+            lines.append(f"    {n}[/{n}/]")
         else:
             lines.append(f"    {n}[{n}]")
     for e in dag["edges"]:
@@ -188,7 +203,7 @@ def _row_definitions(model: Model) -> list[dict[str, Any]]:
     rows = cls._rows
     scalars = cls._scalars
     globs = cls._globs
-    known = set(rows) | set(scalars) | set(globs)
+    known = set(rows) | set(scalars) | set(globs) | set(cls._depends)  # pyright: ignore[reportPrivateUsage]
     out: list[dict[str, Any]] = []
     for name, r in rows.items():
         if r.over is not None:
@@ -211,7 +226,7 @@ def _scalar_definitions(model: Model) -> list[dict[str, Any]]:
     rows = cls._rows
     scalars = cls._scalars
     globs = cls._globs
-    known = set(rows) | set(scalars) | set(globs)
+    known = set(rows) | set(scalars) | set(globs) | set(cls._depends)  # pyright: ignore[reportPrivateUsage]
     out: list[dict[str, Any]] = []
     for name, s in scalars.items():
         out.append({

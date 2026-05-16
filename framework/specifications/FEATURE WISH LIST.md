@@ -1,0 +1,1 @@
+- Becasue we have the DAG, the recomputation should be based on what has changed in the model, leverage diff and maybe pickels

@@ -4,31 +4,31 @@ import { createContext, useCallback, useContext, useState } from "react";
 import type { ModelSnapshot } from "@/lib/model-types";
 
 type ModelContextType = {
-  snapshots: Record<string, ModelSnapshot>;
-  activeModel: string | null;
+  snapshots: ModelSnapshot[];
   setSnapshot: (snapshot: ModelSnapshot) => void;
-  setActiveModel: (name: string) => void;
+  setAllSnapshots: (snapshots: ModelSnapshot[]) => void;
 };
 
 export const ModelContext = createContext<ModelContextType>({
-  snapshots: {},
-  activeModel: null,
+  snapshots: [],
   setSnapshot: () => {},
-  setActiveModel: () => {},
+  setAllSnapshots: () => {},
 });
 
 export function ModelProvider({ children }: { children: React.ReactNode }) {
-  const [snapshots, setSnapshots] = useState<Record<string, ModelSnapshot>>({});
-  const [activeModel, setActiveModel] = useState<string | null>(null);
+  const [snapshots, setSnapshots] = useState<ModelSnapshot[]>([]);
 
   const setSnapshot = useCallback((snapshot: ModelSnapshot) => {
-    const key = snapshot.definition?.name ?? "Model";
-    setSnapshots((prev) => ({ ...prev, [key]: snapshot }));
-    setActiveModel(key);
+    setSnapshots([snapshot]);
+  }, []);
+
+  const setAllSnapshots = useCallback((incoming: ModelSnapshot[]) => {
+    if (incoming.length === 0) return;
+    setSnapshots(incoming);
   }, []);
 
   return (
-    <ModelContext.Provider value={{ snapshots, activeModel, setSnapshot, setActiveModel }}>
+    <ModelContext.Provider value={{ snapshots, setSnapshot, setAllSnapshots }}>
       {children}
     </ModelContext.Provider>
   );

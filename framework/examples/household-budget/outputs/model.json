@@ -1,0 +1,561 @@
+{
+  "models": [
+    {
+      "name": "SalaryModel",
+      "doc": "Detailed salary breakdown feeding into the household budget.",
+      "axes": {
+        "time": {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      },
+      "globals": {
+        "base_salary": {
+          "default": 100000,
+          "type": "int",
+          "doc": "Starting base salary ($)"
+        },
+        "salary_increase": {
+          "default": 0.03,
+          "type": "float",
+          "doc": "Annual base salary increase rate"
+        },
+        "bonus_rate": {
+          "default": 0.1,
+          "type": "float",
+          "doc": "Annual bonus as a fraction of base salary"
+        },
+        "extra_bonus": {
+          "default": 5000,
+          "type": "int",
+          "doc": "Extra bonus paid every two years ($)"
+        }
+      },
+      "rows": [
+        {
+          "name": "base",
+          "kind": "row",
+          "doc": "Base salary after annual increases ($).",
+          "depends_on": [
+            "base_salary",
+            "salary_increase"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef base(self, t):\n    \"\"\"Base salary after annual increases ($).\"\"\"\n    if t == self.time.first:\n        return self.base_salary\n    return self.base(t - 1) * (1 + self.salary_increase)\n"
+        },
+        {
+          "name": "bonus",
+          "kind": "row",
+          "doc": "Annual performance bonus ($).",
+          "depends_on": [
+            "base",
+            "bonus_rate"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef bonus(self, t):\n    \"\"\"Annual performance bonus ($).\"\"\"\n    return self.base(t) * self.bonus_rate\n"
+        },
+        {
+          "name": "extra_bonus_payment",
+          "kind": "row",
+          "doc": "Extra bonus paid every two years \u2014 odd years from start ($).",
+          "depends_on": [
+            "extra_bonus"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef extra_bonus_payment(self, t):\n    \"\"\"Extra bonus paid every two years \u2014 odd years from start ($).\"\"\"\n    if (t - self.time.first) % 2 == 1:\n        return self.extra_bonus\n    return 0\n"
+        },
+        {
+          "name": "total_compensation",
+          "kind": "row",
+          "doc": "Total gross compensation: base + bonus + extra bonus ($).",
+          "depends_on": [
+            "base",
+            "bonus",
+            "extra_bonus_payment"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef total_compensation(self, t):\n    \"\"\"Total gross compensation: base + bonus + extra bonus ($).\"\"\"\n    return self.base(t) + self.bonus(t) + self.extra_bonus_payment(t)\n"
+        }
+      ],
+      "scalars": [],
+      "dag": {
+        "nodes": [
+          {
+            "name": "base_salary",
+            "kind": "glob"
+          },
+          {
+            "name": "bonus_rate",
+            "kind": "glob"
+          },
+          {
+            "name": "extra_bonus",
+            "kind": "glob"
+          },
+          {
+            "name": "salary_increase",
+            "kind": "glob"
+          },
+          {
+            "name": "base",
+            "kind": "row"
+          },
+          {
+            "name": "bonus",
+            "kind": "row"
+          },
+          {
+            "name": "extra_bonus_payment",
+            "kind": "row"
+          },
+          {
+            "name": "total_compensation",
+            "kind": "row"
+          }
+        ],
+        "edges": [
+          {
+            "from": "base_salary",
+            "to": "base"
+          },
+          {
+            "from": "salary_increase",
+            "to": "base"
+          },
+          {
+            "from": "base",
+            "to": "bonus"
+          },
+          {
+            "from": "bonus_rate",
+            "to": "bonus"
+          },
+          {
+            "from": "extra_bonus",
+            "to": "extra_bonus_payment"
+          },
+          {
+            "from": "base",
+            "to": "total_compensation"
+          },
+          {
+            "from": "bonus",
+            "to": "total_compensation"
+          },
+          {
+            "from": "extra_bonus_payment",
+            "to": "total_compensation"
+          }
+        ]
+      },
+      "mermaid": "graph TD\n    base_salary([base_salary])\n    bonus_rate([bonus_rate])\n    extra_bonus([extra_bonus])\n    salary_increase([salary_increase])\n    base[base]\n    bonus[bonus]\n    extra_bonus_payment[extra_bonus_payment]\n    total_compensation[total_compensation]\n    base_salary --> base\n    salary_increase --> base\n    base --> bonus\n    bonus_rate --> bonus\n    extra_bonus --> extra_bonus_payment\n    base --> total_compensation\n    bonus --> total_compensation\n    extra_bonus_payment --> total_compensation"
+    },
+    {
+      "name": "HouseholdBudget",
+      "doc": "Annual household budget, driven by SalaryModel for income.",
+      "axes": {
+        "time": {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      },
+      "globals": {
+        "housing_cost": {
+          "default": 18000,
+          "type": "int",
+          "doc": "Annual housing cost \u2014 rent/mortgage ($)"
+        },
+        "groceries": {
+          "default": 7200,
+          "type": "int",
+          "doc": "Annual grocery spending ($)"
+        },
+        "transport": {
+          "default": 5400,
+          "type": "int",
+          "doc": "Annual transport cost ($)"
+        },
+        "utilities": {
+          "default": 2400,
+          "type": "int",
+          "doc": "Annual utilities ($)"
+        },
+        "entertainment": {
+          "default": 3000,
+          "type": "int",
+          "doc": "Annual entertainment & dining ($)"
+        },
+        "expense_inflation": {
+          "default": 0.025,
+          "type": "float",
+          "doc": "Annual expense inflation rate"
+        },
+        "tax_rate": {
+          "default": 0.22,
+          "type": "float",
+          "doc": "Effective income tax rate"
+        }
+      },
+      "rows": [
+        {
+          "name": "gross_income",
+          "kind": "row",
+          "doc": "Gross household income \u2014 sourced from SalaryModel ($).",
+          "depends_on": [
+            "salary"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef gross_income(self, t):\n    \"\"\"Gross household income \u2014 sourced from SalaryModel ($).\"\"\"\n    return self.salary.total_compensation(t)\n"
+        },
+        {
+          "name": "taxes",
+          "kind": "row",
+          "doc": "Income taxes paid ($).",
+          "depends_on": [
+            "gross_income",
+            "tax_rate"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef taxes(self, t):\n    \"\"\"Income taxes paid ($).\"\"\"\n    return self.gross_income(t) * self.tax_rate\n"
+        },
+        {
+          "name": "net_income",
+          "kind": "row",
+          "doc": "Take-home pay after taxes ($).",
+          "depends_on": [
+            "gross_income",
+            "taxes"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef net_income(self, t):\n    \"\"\"Take-home pay after taxes ($).\"\"\"\n    return self.gross_income(t) - self.taxes(t)\n"
+        },
+        {
+          "name": "total_expenses",
+          "kind": "row",
+          "doc": "Total annual household expenses ($).",
+          "depends_on": [
+            "entertainment",
+            "expense_inflation",
+            "groceries",
+            "housing_cost",
+            "transport",
+            "utilities"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef total_expenses(self, t):\n    \"\"\"Total annual household expenses ($).\"\"\"\n    base = (self.housing_cost + self.groceries +\n            self.transport + self.utilities + self.entertainment)\n    if t == self.time.first:\n        return base\n    return self.total_expenses(t - 1) * (1 + self.expense_inflation)\n"
+        },
+        {
+          "name": "net_savings",
+          "kind": "row",
+          "doc": "Annual net savings ($).",
+          "depends_on": [
+            "net_income",
+            "total_expenses"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef net_savings(self, t):\n    \"\"\"Annual net savings ($).\"\"\"\n    return self.net_income(t) - self.total_expenses(t)\n"
+        },
+        {
+          "name": "savings_rate",
+          "kind": "row",
+          "doc": "Savings as a share of net income (%).",
+          "depends_on": [
+            "net_income",
+            "net_savings"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef savings_rate(self, t):\n    \"\"\"Savings as a share of net income (%).\"\"\"\n    return self.net_savings(t) / self.net_income(t)\n"
+        },
+        {
+          "name": "cumulative_savings",
+          "kind": "row",
+          "doc": "Running total of savings accumulated ($).",
+          "depends_on": [
+            "net_savings"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "source": "@row\ndef cumulative_savings(self, t):\n    \"\"\"Running total of savings accumulated ($).\"\"\"\n    if t == self.time.first:\n        return self.net_savings(t)\n    return self.cumulative_savings(t - 1) + self.net_savings(t)\n"
+        }
+      ],
+      "scalars": [],
+      "dag": {
+        "nodes": [
+          {
+            "name": "entertainment",
+            "kind": "glob"
+          },
+          {
+            "name": "expense_inflation",
+            "kind": "glob"
+          },
+          {
+            "name": "groceries",
+            "kind": "glob"
+          },
+          {
+            "name": "housing_cost",
+            "kind": "glob"
+          },
+          {
+            "name": "tax_rate",
+            "kind": "glob"
+          },
+          {
+            "name": "transport",
+            "kind": "glob"
+          },
+          {
+            "name": "utilities",
+            "kind": "glob"
+          },
+          {
+            "name": "salary",
+            "kind": "depends"
+          },
+          {
+            "name": "cumulative_savings",
+            "kind": "row"
+          },
+          {
+            "name": "gross_income",
+            "kind": "row"
+          },
+          {
+            "name": "net_income",
+            "kind": "row"
+          },
+          {
+            "name": "net_savings",
+            "kind": "row"
+          },
+          {
+            "name": "savings_rate",
+            "kind": "row"
+          },
+          {
+            "name": "taxes",
+            "kind": "row"
+          },
+          {
+            "name": "total_expenses",
+            "kind": "row"
+          }
+        ],
+        "edges": [
+          {
+            "from": "salary",
+            "to": "gross_income"
+          },
+          {
+            "from": "gross_income",
+            "to": "taxes"
+          },
+          {
+            "from": "tax_rate",
+            "to": "taxes"
+          },
+          {
+            "from": "gross_income",
+            "to": "net_income"
+          },
+          {
+            "from": "taxes",
+            "to": "net_income"
+          },
+          {
+            "from": "entertainment",
+            "to": "total_expenses"
+          },
+          {
+            "from": "expense_inflation",
+            "to": "total_expenses"
+          },
+          {
+            "from": "groceries",
+            "to": "total_expenses"
+          },
+          {
+            "from": "housing_cost",
+            "to": "total_expenses"
+          },
+          {
+            "from": "transport",
+            "to": "total_expenses"
+          },
+          {
+            "from": "utilities",
+            "to": "total_expenses"
+          },
+          {
+            "from": "net_income",
+            "to": "net_savings"
+          },
+          {
+            "from": "total_expenses",
+            "to": "net_savings"
+          },
+          {
+            "from": "net_income",
+            "to": "savings_rate"
+          },
+          {
+            "from": "net_savings",
+            "to": "savings_rate"
+          },
+          {
+            "from": "net_savings",
+            "to": "cumulative_savings"
+          }
+        ]
+      },
+      "mermaid": "graph TD\n    entertainment([entertainment])\n    expense_inflation([expense_inflation])\n    groceries([groceries])\n    housing_cost([housing_cost])\n    tax_rate([tax_rate])\n    transport([transport])\n    utilities([utilities])\n    salary[/salary/]\n    cumulative_savings[cumulative_savings]\n    gross_income[gross_income]\n    net_income[net_income]\n    net_savings[net_savings]\n    savings_rate[savings_rate]\n    taxes[taxes]\n    total_expenses[total_expenses]\n    salary --> gross_income\n    gross_income --> taxes\n    tax_rate --> taxes\n    gross_income --> net_income\n    taxes --> net_income\n    entertainment --> total_expenses\n    expense_inflation --> total_expenses\n    groceries --> total_expenses\n    housing_cost --> total_expenses\n    transport --> total_expenses\n    utilities --> total_expenses\n    net_income --> net_savings\n    total_expenses --> net_savings\n    net_income --> savings_rate\n    net_savings --> savings_rate\n    net_savings --> cumulative_savings"
+    }
+  ],
+  "documentation": null
+}

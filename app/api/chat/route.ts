@@ -1,14 +1,33 @@
-import { gateway } from "@ai-sdk/gateway";
-import { streamText } from "ai";
+import {
+  getAgent,
+  getActiveSandboxId,
+  getActiveSnapshotId,
+  extendSandboxTimeout,
+} from "@/lib/agent";
+import { convertToModelMessages } from "ai";
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { messages, sandboxId, snapshotId } = await req.json();
 
-  const result = streamText({
-    messages,
-    model: gateway("anthropic/claude-sonnet-4.6"),
-    system: "You are a helpful assistant.",
+  // Push the sandbox deadline forward on every user message so the sandbox
+  // only times out when the user is genuinely idle, not mid-conversation.
+  await extendSandboxTimeout();
+
+  const agent = await getAgent(sandboxId ?? null, snapshotId ?? null);
+  const result = await agent.stream({
+    messages: await convertToModelMessages(messages),
   });
 
-  return result.toUIMessageStreamResponse();
+  const streamResponse = result.toUIMessageStreamResponse();
+  const activeSandboxId = getActiveSandboxId();
+  const activeSnapshotId = getActiveSnapshotId();
+
+  return new Response(streamResponse.body, {
+    status: streamResponse.status,
+    headers: {
+      ...Object.fromEntries(streamResponse.headers.entries()),
+      ...(activeSandboxId ? { "x-sandbox-id": activeSandboxId } : {}),
+      ...(activeSnapshotId ? { "x-snapshot-id": activeSnapshotId } : {}),
+    },
+  });
 }

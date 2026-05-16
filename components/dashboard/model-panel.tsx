@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -10,12 +15,15 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import type { GlobValue, ModelSnapshot, TableResult } from "@/lib/model-types";
+import { CodeBlockContent } from "@/components/ai-elements/code-block";
+import { Accordion as AccordionPrimitive } from "radix-ui";
 import {
   CheckCircle2Icon,
   CircleDashedIcon,
   InfoIcon,
   XCircleIcon,
 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useModel } from "./model-context";
 
 // ---------------------------------------------------------------------------
@@ -34,8 +42,16 @@ function formatValue(v: number | string | boolean | null | undefined): string {
   return String(v);
 }
 
+function extractModelNames(source: string): string[] {
+  const names: string[] = [];
+  for (const m of source.matchAll(/^class\s+(\w+)\s*\([^)]*Model[^)]*\)/gm)) {
+    names.push(m[1]);
+  }
+  return names;
+}
+
 // ---------------------------------------------------------------------------
-// status badge
+// shared sub-components
 // ---------------------------------------------------------------------------
 
 function StatusBadge({ status }: { status?: "ok" | "error" }) {
@@ -61,10 +77,6 @@ function StatusBadge({ status }: { status?: "ok" | "error" }) {
     </Badge>
   );
 }
-
-// ---------------------------------------------------------------------------
-// inputs bar
-// ---------------------------------------------------------------------------
 
 function InputsBar({ inputs }: { inputs: Record<string, GlobValue> }) {
   const entries = Object.entries(inputs);
@@ -95,10 +107,6 @@ function InputsBar({ inputs }: { inputs: Record<string, GlobValue> }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// model table (one row per @row, columns = time periods)
-// ---------------------------------------------------------------------------
-
 function InfoTooltip({ doc }: { doc?: string | null }) {
   if (!doc) return null;
   return (
@@ -115,8 +123,6 @@ function InfoTooltip({ doc }: { doc?: string | null }) {
 
 function ModelTable({ snapshot }: { snapshot: ModelSnapshot }) {
   const { definition, execution } = snapshot;
-
-  // Resolve rows: prefer definition (has source) over execution tables
   const defRows = definition?.rows ?? [];
   const execTables: TableResult[] = execution?.tables ?? [];
 
@@ -132,7 +138,6 @@ function ModelTable({ snapshot }: { snapshot: ModelSnapshot }) {
           source: undefined,
         }));
 
-  // Period labels from first available source
   const periods =
     execTables[0]?.columns[0]?.values ??
     defRows[0]?.columns[0]?.values ??
@@ -142,7 +147,7 @@ function ModelTable({ snapshot }: { snapshot: ModelSnapshot }) {
 
   if (rows.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+      <div className="px-4 py-6 text-center text-xs text-muted-foreground">
         No rows yet.
       </div>
     );
@@ -170,10 +175,7 @@ function ModelTable({ snapshot }: { snapshot: ModelSnapshot }) {
           {rows.map((row) => {
             const table = tableByName.get(row.name);
             return (
-              <tr
-                key={row.name}
-                className="transition-colors hover:bg-muted/30"
-              >
+              <tr key={row.name} className="transition-colors hover:bg-muted/30">
                 <td className="sticky left-0 z-10 bg-background px-4 py-2.5">
                   <div className="flex items-center gap-1.5">
                     <span className="font-mono">{row.name}</span>
@@ -197,41 +199,111 @@ function ModelTable({ snapshot }: { snapshot: ModelSnapshot }) {
   );
 }
 
-// ---------------------------------------------------------------------------
-// error block
-// ---------------------------------------------------------------------------
-
 function ErrorBlock({ message }: { message?: string }) {
   return (
     <div className="px-4 py-3">
-      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md bg-red-50 p-3 font-mono text-red-800 text-xs dark:bg-red-900/20 dark:text-red-300">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md bg-red-50 p-3 font-mono text-xs text-red-800 dark:bg-red-900/20 dark:text-red-300">
         {message ?? "Unknown error"}
       </pre>
     </div>
   );
 }
 
+// Flush accordion content — no horizontal padding so tables can be edge-to-edge.
+function AccordionContentFlush({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <AccordionPrimitive.Content
+      data-slot="accordion-content"
+      className={cn(
+        "overflow-hidden data-open:animate-accordion-down data-closed:animate-accordion-up",
+        className
+      )}
+    >
+      {children}
+    </AccordionPrimitive.Content>
+  );
+}
+
 // ---------------------------------------------------------------------------
-// single-model view (inputs + table/error)
+// tab content components
 // ---------------------------------------------------------------------------
 
-function ModelView({ snapshot }: { snapshot: ModelSnapshot }) {
-  const inputs = snapshot.execution?.inputs;
-  const isError = snapshot.execution?.status === "error";
-  return (
-    <>
-      {inputs && Object.keys(inputs).length > 0 && (
-        <InputsBar inputs={inputs} />
-      )}
-      <div className="flex-1 overflow-auto">
-        {isError ? (
-          <ErrorBlock message={snapshot.execution?.message} />
-        ) : (
-          <ModelTable snapshot={snapshot} />
-        )}
-      </div>
-    </>
+function ModelTab({ snapshots }: { snapshots: ModelSnapshot[] }) {
+  const source = snapshots[0]?.source ?? "";
+  const names = useMemo(() => extractModelNames(source), [source]);
+  const defaultValues = useMemo(
+    () => snapshots.map((_, i) => String(i)),
+    [snapshots]
   );
+
+  return (
+    <Accordion
+      type="multiple"
+      defaultValue={defaultValues}
+      className="rounded-none border-x-0 border-t-0 border-b-0"
+    >
+      {snapshots.map((snapshot, i) => {
+        const name = names[i] ?? snapshot.definition?.name ?? `Model ${i + 1}`;
+        const doc = snapshot.definition?.doc;
+        const inputs = snapshot.execution?.inputs;
+        const isError = snapshot.execution?.status === "error";
+
+        return (
+          <AccordionItem
+            key={i}
+            value={String(i)}
+            className="border-b last:border-b-0 data-open:bg-transparent"
+          >
+            <AccordionTrigger className="px-4 py-2.5 hover:no-underline">
+              <div className="flex flex-1 items-center gap-2 min-w-0 pr-2">
+                <span className="font-mono text-sm font-semibold">{name}</span>
+                {doc && (
+                  <span className="truncate text-xs text-muted-foreground">
+                    {doc}
+                  </span>
+                )}
+                <div className="ml-auto shrink-0">
+                  <StatusBadge status={snapshot.execution?.status} />
+                </div>
+              </div>
+            </AccordionTrigger>
+            <AccordionContentFlush>
+              {inputs && Object.keys(inputs).length > 0 && (
+                <InputsBar inputs={inputs} />
+              )}
+              {isError ? (
+                <ErrorBlock message={snapshot.execution?.message} />
+              ) : (
+                <ModelTable snapshot={snapshot} />
+              )}
+            </AccordionContentFlush>
+          </AccordionItem>
+        );
+      })}
+    </Accordion>
+  );
+}
+
+function PythonTab({ snapshots }: { snapshots: ModelSnapshot[] }) {
+  const source = snapshots[0]?.source ?? "";
+  if (!source) {
+    return (
+      <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+        No source available.
+      </div>
+    );
+  }
+  return <CodeBlockContent code={source} language="python" />;
+}
+
+function JsonTab({ code }: { code: string }) {
+  return <CodeBlockContent code={code} language="json" />;
 }
 
 // ---------------------------------------------------------------------------
@@ -242,7 +314,7 @@ function EmptyState() {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center">
       <CircleDashedIcon className="size-8 text-muted-foreground/40" />
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-muted-foreground">
         No model yet. Start chatting to build one.
       </p>
     </div>
@@ -253,11 +325,56 @@ function EmptyState() {
 // root component
 // ---------------------------------------------------------------------------
 
-export function ModelPanel({ className }: { className?: string }) {
-  const { snapshots, activeModel, setActiveModel } = useModel();
-  const names = Object.keys(snapshots);
+type PanelTab = "model" | "python" | "result-json" | "model-json";
 
-  if (names.length === 0) {
+export function ModelPanel({ className }: { className?: string }) {
+  const { snapshots } = useModel();
+  const [tab, setTab] = useState<PanelTab>("model");
+
+  const source = useMemo(() => snapshots[0]?.source ?? "", [snapshots]);
+  const names = useMemo(() => extractModelNames(source), [source]);
+
+  const resultJson = useMemo(
+    () =>
+      JSON.stringify(
+        {
+          models: snapshots.map((s) => ({
+            inputs: s.execution?.inputs ?? {},
+            tables: s.execution?.tables ?? [],
+            scalars: s.execution?.scalars ?? [],
+          })),
+        },
+        null,
+        2
+      ),
+    [snapshots]
+  );
+
+  const modelJson = useMemo(
+    () =>
+      JSON.stringify(
+        {
+          models: snapshots.map((s, i) => ({
+            model: {
+              name:
+                names[i] ?? s.definition?.name ?? `Model ${i + 1}`,
+              doc: s.definition?.doc ?? null,
+              axes: s.definition?.axes ?? {},
+              dag: s.definition?.dag ?? { nodes: [], edges: [] },
+              mermaid: s.definition?.mermaid ?? "",
+            },
+            inputs: s.definition?.globals ?? {},
+            tables: s.definition?.rows ?? [],
+            scalars: s.definition?.scalars ?? [],
+          })),
+        },
+        null,
+        2
+      ),
+    [snapshots, names]
+  );
+
+  if (snapshots.length === 0) {
     return (
       <div
         className={cn(
@@ -265,18 +382,16 @@ export function ModelPanel({ className }: { className?: string }) {
           className
         )}
       >
-        <div className="flex shrink-0 items-center gap-2 border-b px-4 py-3">
-          <span className="font-medium text-sm">Model</span>
-          <span className="text-muted-foreground text-xs">empty</span>
-        </div>
         <EmptyState />
       </div>
     );
   }
 
-  const currentName =
-    activeModel && names.includes(activeModel) ? activeModel : names[0];
-  const snapshot = snapshots[currentName];
+  const overallStatus = snapshots.some((s) => s.execution?.status === "error")
+    ? ("error" as const)
+    : snapshots.some((s) => s.execution?.status === "ok")
+      ? ("ok" as const)
+      : undefined;
 
   return (
     <TooltipProvider>
@@ -287,26 +402,37 @@ export function ModelPanel({ className }: { className?: string }) {
         )}
       >
         {/* Tab bar */}
-        <div className="flex shrink-0 items-center gap-3 border-b px-4 py-2">
+        <div className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5">
           <Tabs
-            value={currentName}
-            onValueChange={setActiveModel}
-            className="flex-1"
+            value={tab}
+            onValueChange={(v) => setTab(v as PanelTab)}
           >
-            <TabsList>
-              {names.map((name) => (
-                <TabsTrigger key={name} value={name}>
-                  {name}
-                </TabsTrigger>
-              ))}
+            <TabsList className="h-7">
+              <TabsTrigger value="model" className="h-6 px-2.5 text-xs">
+                Model
+              </TabsTrigger>
+              <TabsTrigger value="python" className="h-6 px-2.5 text-xs">
+                Python
+              </TabsTrigger>
+              <TabsTrigger value="result-json" className="h-6 px-2.5 text-xs font-mono">
+                result.json
+              </TabsTrigger>
+              <TabsTrigger value="model-json" className="h-6 px-2.5 text-xs font-mono">
+                model.json
+              </TabsTrigger>
             </TabsList>
           </Tabs>
-          <StatusBadge status={snapshot?.execution?.status} />
+          <div className="ml-auto">
+            <StatusBadge status={overallStatus} />
+          </div>
         </div>
 
         {/* Content */}
-        <div className="flex flex-1 flex-col overflow-hidden">
-          {snapshot && <ModelView snapshot={snapshot} />}
+        <div className="min-h-0 flex-1 overflow-auto">
+          {tab === "model" && <ModelTab snapshots={snapshots} />}
+          {tab === "python" && <PythonTab snapshots={snapshots} />}
+          {tab === "result-json" && <JsonTab code={resultJson} />}
+          {tab === "model-json" && <JsonTab code={modelJson} />}
         </div>
       </div>
     </TooltipProvider>
