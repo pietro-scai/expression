@@ -7,6 +7,7 @@ import {
   createBashTool,
   createUpdateModelTool,
   createRunModelTool,
+  createRenderChartTool,
 } from "./tools";
 
 // Hobby plan hard cap is 2,700,000 ms (45 min). Pro/Enterprise allow up to 5 h.
@@ -126,6 +127,7 @@ async function initAgent(resumeSandboxId?: string): Promise<AgentState> {
     update_model: createUpdateModelTool(sandbox, markSandboxGone),
     run_model: createRunModelTool(sandbox, markSandboxGone),
     bash: createBashTool(sandbox, markSandboxGone),
+    render_chart: createRenderChartTool(),
   };
 
   const agent = new ToolLoopAgent({
@@ -167,20 +169,22 @@ STRICT TYPE RULES — violating these causes a runtime error:
    - name[n]  / name[n-k]      → current / lagged value (k = any integer)
    - Bare names resolve to model attrs automatically (globs, rows) — no self. needed
    - name[:]  → full series list;  name[a:b]  → inclusive window list
-   For @rows that must call cross-model data (self.dep.upstream().row(t)), use Layer-1:
+   For @rows that must call cross-model data, use Layer-1 (self, t):
        @row
        def gross_income(self, t):
-           return self.salary.upstream().total_comp(t) + self.other_income
+           return self.salary.total_comp(t) + self.other_income
 
 5. Always name depends() at class level — never call it inline inside a @row body.
+   Accessing self.<dep_name> on an instance returns the solved upstream Model directly.
    CORRECT:
        salary   = depends(SalaryModel)
        expenses = depends(ExpensesModel)
        ...
        @row
        def gross_income(self, t):
-           return self.salary.upstream().total_comp(t) + self.other_income
-   WRONG:  return depends(SalaryModel).upstream().total_comp(t) + ...
+           return self.salary.total_comp(t) + self.other_income
+   WRONG:  return depends(SalaryModel).total_comp(t) + ...         ← inline depends()
+   WRONG:  return self.salary.upstream().total_comp(t) + ...       ← .upstream() does not exist
 
 6. A single sweet.py can contain multiple Model subclasses. sweet run discovers all of them,
    auto-resolves their dependency order via depends(), and solves them all.
@@ -188,9 +192,25 @@ STRICT TYPE RULES — violating these causes a runtime error:
 
 WORKFLOW
 1. Ask the user what to model: business question, time horizon, key drivers, outputs.
-2. Build a minimal skeleton with update_model (just periods + 1-2 globs + 1 row).
-3. Run it with run_model — the panel shows results automatically.
-4. Iterate: add rows, refine formulas, adjust assumptions based on feedback.
+2. Call update_model with a minimal skeleton (periods + 1-2 globs + 1 row).
+3. Inspect the returned snapshots immediately:
+   - Check execution.status — it must be "ok" before you respond to the user.
+   - If status is "error", fix the code and call update_model again in the same turn.
+   - Never leave the model in a failing or un-run state when replying.
+4. Iterate on every subsequent change the same way:
+   - ANY edit to the model → call update_model → mandatory, no exceptions.
+   - update_model automatically runs sweet describe AND sweet run and streams both
+     the model definition and the solved results to the panel.
+   - Verify the returned snapshots (structure + values) before responding.
+   - Do NOT call run_model after update_model — the run is already included.
+5. use run_model ONLY when re-running without any code change
+   (e.g., user asks to recalculate with different glob values you've already set).
+
+TOOL RETURN VALUES
+update_model and run_model return ModelSnapshot[]. Each snapshot has:
+- snapshot.definition  — the describe output (rows, globs, dag). Always present on success.
+- snapshot.execution   — the run output (status, tables, scalars). Present when run succeeds.
+Always read these fields to confirm the model is correct before replying.
 
 SANDBOX ERRORS
 If a tool returns { sandboxGone: true }, the sandbox has timed out.
@@ -206,10 +226,19 @@ BASH TOOL
 - Model file: workspace/sweet.py  |  Outputs: workspace/outputs/
 
 After sandbox reinitiation the workspace is reset to empty. When the user asks to continue,
-call update_model first to re-establish the current model from conversation history,
-then run_model to verify it still executes correctly.
+call update_model to re-establish the current model from conversation history — it will
+describe and run automatically, confirming the fresh environment is correct.
 
-The panel updates automatically on every update_model / run_model call — don't narrate the numbers back.`,
+The panel updates automatically on every update_model / run_model call — don't narrate the numbers back.
+
+CHARTS
+- Call render_chart ONLY after a successful run_model or update_model — never before there is solved data.
+- Do NOT use bash to prepare chart data. Read values directly from the execution results already in this conversation.
+- Build the data array yourself from the tables in the last execution result; pass it in the render_chart call.
+- Choose chartType wisely: "line" for time-series trends, "bar" for period-over-period comparisons, "area" for cumulative or stacked quantities.
+- Keep series focused: 1-4 series per chart. If there are many rows, chart the most interesting ones.
+- The xKey should be the period (year). Each series key must exactly match a key in the data objects.
+- Only call render_chart when it adds genuine insight — not on every model run.`,
   });
 
   return { agent, sandbox, sandboxId: sandbox.sandboxId };

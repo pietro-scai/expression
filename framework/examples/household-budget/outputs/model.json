@@ -456,7 +456,8 @@
           },
           {
             "name": "salary",
-            "kind": "depends"
+            "kind": "depends",
+            "upstream": "SalaryModel"
           },
           {
             "name": "cumulative_savings",

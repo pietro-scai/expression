@@ -227,13 +227,13 @@ def _classify_lhs(target: ast.expr, row_name: str, scope: _Scope) -> ast.expr | 
 
 
 def _layer2_deps_from_tree(tree: ast.AST, scope: _Scope, exclude: str) -> set[str]:
-    """Walk a *Layer-2* AST and collect referenced row/scalar names.
+    """Walk a *Layer-2* AST and collect referenced model-attribute names.
 
-    Recognizes ``name[...]`` subscripts and bare ``name`` references where
-    ``name`` is a known row or scalar.
+    Recognizes ``name[...]`` subscripts (rows/scalars) and bare ``name``
+    references (rows, scalars, globs, depends) that are known model attributes.
     """
     deps: set[str] = set()
-    known = scope.rows | scope.scalars
+    known = scope.rows | scope.scalars | scope.globs | scope.depends
     for node in ast.walk(tree):
         if (
             isinstance(node, ast.Subscript)

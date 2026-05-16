@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useModel } from "./model-context";
+import { ModelGraph } from "./model-graph";
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -325,14 +326,11 @@ function EmptyState() {
 // root component
 // ---------------------------------------------------------------------------
 
-type PanelTab = "model" | "python" | "result-json" | "model-json";
+type PanelTab = "model" | "graph" | "python" | "result-json" | "model-json";
 
 export function ModelPanel({ className }: { className?: string }) {
   const { snapshots } = useModel();
   const [tab, setTab] = useState<PanelTab>("model");
-
-  const source = useMemo(() => snapshots[0]?.source ?? "", [snapshots]);
-  const names = useMemo(() => extractModelNames(source), [source]);
 
   const resultJson = useMemo(
     () =>
@@ -350,29 +348,12 @@ export function ModelPanel({ className }: { className?: string }) {
     [snapshots]
   );
 
-  const modelJson = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          models: snapshots.map((s, i) => ({
-            model: {
-              name:
-                names[i] ?? s.definition?.name ?? `Model ${i + 1}`,
-              doc: s.definition?.doc ?? null,
-              axes: s.definition?.axes ?? {},
-              dag: s.definition?.dag ?? { nodes: [], edges: [] },
-              mermaid: s.definition?.mermaid ?? "",
-            },
-            inputs: s.definition?.globals ?? {},
-            tables: s.definition?.rows ?? [],
-            scalars: s.definition?.scalars ?? [],
-          })),
-        },
-        null,
-        2
-      ),
-    [snapshots, names]
-  );
+  // Use the raw model.json string streamed from the sandbox when available,
+  // so the tab shows exactly what sweet describe wrote — no round-trip drift.
+  const modelJson = useMemo(() => {
+    const raw = snapshots[0]?.rawModelJson;
+    return raw ?? "{}";
+  }, [snapshots]);
 
   if (snapshots.length === 0) {
     return (
@@ -411,6 +392,9 @@ export function ModelPanel({ className }: { className?: string }) {
               <TabsTrigger value="model" className="h-6 px-2.5 text-xs">
                 Model
               </TabsTrigger>
+              <TabsTrigger value="graph" className="h-6 px-2.5 text-xs">
+                Graph
+              </TabsTrigger>
               <TabsTrigger value="python" className="h-6 px-2.5 text-xs">
                 Python
               </TabsTrigger>
@@ -428,11 +412,28 @@ export function ModelPanel({ className }: { className?: string }) {
         </div>
 
         {/* Content */}
-        <div className="min-h-0 flex-1 overflow-auto">
-          {tab === "model" && <ModelTab snapshots={snapshots} />}
-          {tab === "python" && <PythonTab snapshots={snapshots} />}
-          {tab === "result-json" && <JsonTab code={resultJson} />}
-          {tab === "model-json" && <JsonTab code={modelJson} />}
+        <div className="min-h-0 flex-1 overflow-hidden">
+          {tab === "model" && (
+            <div className="h-full overflow-auto">
+              <ModelTab snapshots={snapshots} />
+            </div>
+          )}
+          {tab === "graph" && <ModelGraph snapshots={snapshots} />}
+          {tab === "python" && (
+            <div className="h-full overflow-auto">
+              <PythonTab snapshots={snapshots} />
+            </div>
+          )}
+          {tab === "result-json" && (
+            <div className="h-full overflow-auto">
+              <JsonTab code={resultJson} />
+            </div>
+          )}
+          {tab === "model-json" && (
+            <div className="h-full overflow-auto">
+              <JsonTab code={modelJson} />
+            </div>
+          )}
         </div>
       </div>
     </TooltipProvider>

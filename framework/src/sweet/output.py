@@ -148,7 +148,8 @@ def _build_dag(model: Model) -> dict[str, Any]:
     nodes = [
         {"name": n, "kind": "glob"} for n in sorted(globs)
     ] + [
-        {"name": n, "kind": "depends"} for n in sorted(dep_models)
+        {"name": n, "kind": "depends", "upstream": dep_models[n].upstream.__name__}
+        for n in sorted(dep_models)
     ] + [
         {"name": n, "kind": "row"} for n in sorted(rows)
     ] + [

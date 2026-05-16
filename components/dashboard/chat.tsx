@@ -31,6 +31,8 @@ import {
   ToolOutput,
 } from "@/components/ai-elements/tool";
 import type { ModelSnapshot } from "@/lib/model-types";
+import type { ChartSpec } from "@/lib/chart-types";
+import { ChartRenderer } from "./chart-renderer";
 import { useSandboxStore } from "@/lib/sandbox-store";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
@@ -41,6 +43,9 @@ import { useModel } from "./model-context";
 
 // Tool names whose output is displayed in the right panel — suppress inline JSON.
 const PANEL_TOOLS = new Set(["update_model", "run_model"]);
+
+// Tool names that render custom UI instead of raw JSON output.
+const CHART_TOOL = "render_chart";
 
 function getToolName(part: Record<string, unknown>): string {
   if (part.type === "dynamic-tool") return String(part.toolName ?? "");
@@ -77,6 +82,32 @@ function MessageParts({ parts }: { parts: UIMessage["parts"] }) {
         if (isToolPart) {
           const toolName = getToolName(part);
           const isPanel = PANEL_TOOLS.has(toolName);
+          const isChart = toolName === CHART_TOOL;
+
+          // Render chart inline when the tool output is available
+          if (isChart && part.state === "output-available" && part.output) {
+            return (
+              <ChartRenderer key={i} spec={part.output as ChartSpec} />
+            );
+          }
+
+          // While render_chart is still running, show a compact tool indicator
+          if (isChart) {
+            return (
+              <Tool key={i}>
+                {part.type === "dynamic-tool" ? (
+                  <ToolHeader
+                    type="dynamic-tool"
+                    state={part.state}
+                    toolName={part.toolName}
+                  />
+                ) : (
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  <ToolHeader type={part.type as any} state={part.state} />
+                )}
+              </Tool>
+            );
+          }
 
           return (
             <Tool key={i}>

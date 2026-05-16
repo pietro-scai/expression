@@ -26,7 +26,11 @@ export type ScalarDefinition = {
   source?: string | null;
 };
 
-export type DagNode = { name: string; kind: "glob" | "row" | "scalar" };
+export type DagNode = {
+  name: string;
+  kind: "glob" | "row" | "scalar" | "depends";
+  upstream?: string;
+};
 export type DagEdge = { from: string; to: string };
 
 export type ModelDefinition = {
@@ -76,4 +80,6 @@ export type ModelSnapshot = {
   source: string;
   definition?: ModelDefinition;
   execution?: ModelExecution;
+  /** Raw model.json string from the sandbox — exactly what sweet describe wrote. */
+  rawModelJson?: string;
 };
