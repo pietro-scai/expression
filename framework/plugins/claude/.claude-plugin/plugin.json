@@ -1,0 +1,7 @@
+{
+  "name": "sweet",
+  "description": "Spreadsheet-as-DAG modeling skills and slash commands for the `sweet` CLI.",
+  "author": {
+    "name": "Pietro Casella"
+  }
+}

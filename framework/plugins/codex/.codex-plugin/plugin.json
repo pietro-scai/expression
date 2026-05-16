@@ -1,0 +1,12 @@
+{
+  "name": "sweet",
+  "version": "0.1.0",
+  "description": "Spreadsheet-as-DAG modeling skills for the `sweet` CLI.",
+  "author": {
+    "name": "Pietro Casella"
+  },
+  "repository": "https://github.com/pcasella/amsterdam",
+  "homepage": "https://github.com/pcasella/amsterdam#readme",
+  "license": "MIT",
+  "keywords": ["spreadsheet", "modeling", "excel", "finance", "dag"]
+}

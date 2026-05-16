@@ -1,0 +1,189 @@
+{
+  "model": {
+    "name": "SalaryModel",
+    "doc": null,
+    "axes": {
+      "time": {
+        "kind": "periods",
+        "values": [
+          2025,
+          2026,
+          2027,
+          2028,
+          2029,
+          2030
+        ]
+      }
+    }
+  },
+  "inputs": {
+    "base_salary": {
+      "value": 55000.0,
+      "default": 55000.0,
+      "type": "float",
+      "doc": "Annual gross base salary (\u20ac)"
+    },
+    "annual_raise": {
+      "value": 0.03,
+      "default": 0.03,
+      "type": "float",
+      "doc": "Annual raise rate"
+    },
+    "bonus_rate": {
+      "value": 0.1,
+      "default": 0.1,
+      "type": "float",
+      "doc": "Bonus as fraction of gross salary"
+    },
+    "side_income": {
+      "value": 3000.0,
+      "default": 3000.0,
+      "type": "float",
+      "doc": "Annual side income \u2014 freelance, consulting (\u20ac)"
+    },
+    "tax_rate": {
+      "value": 0.38,
+      "default": 0.38,
+      "type": "float",
+      "doc": "Effective income tax + social contributions rate"
+    }
+  },
+  "tables": [
+    {
+      "name": "gross_salary",
+      "kind": "row",
+      "doc": null,
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 55000.0,
+        "2026": 56650.0,
+        "2027": 58349.5,
+        "2028": 60099.985,
+        "2029": 61902.98455,
+        "2030": 63760.074086500004
+      }
+    },
+    {
+      "name": "bonus",
+      "kind": "row",
+      "doc": null,
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 5500.0,
+        "2026": 5665.0,
+        "2027": 5834.950000000001,
+        "2028": 6009.998500000001,
+        "2029": 6190.298455,
+        "2030": 6376.007408650001
+      }
+    },
+    {
+      "name": "gross_income",
+      "kind": "row",
+      "doc": null,
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 63500.0,
+        "2026": 65315.0,
+        "2027": 67184.45,
+        "2028": 69109.9835,
+        "2029": 71093.283005,
+        "2030": 73136.08149515
+      }
+    },
+    {
+      "name": "tax",
+      "kind": "row",
+      "doc": null,
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 24130.0,
+        "2026": 24819.7,
+        "2027": 25530.091,
+        "2028": 26261.79373,
+        "2029": 27015.4475419,
+        "2030": 27791.710968157004
+      }
+    },
+    {
+      "name": "net_income",
+      "kind": "row",
+      "doc": null,
+      "depends_on": [],
+      "columns": [
+        {
+          "kind": "periods",
+          "values": [
+            2025,
+            2026,
+            2027,
+            2028,
+            2029,
+            2030
+          ]
+        }
+      ],
+      "results": {
+        "2025": 39370.0,
+        "2026": 40495.3,
+        "2027": 41654.359,
+        "2028": 42848.18977,
+        "2029": 44077.835463100004,
+        "2030": 45344.37052699301
+      }
+    }
+  ],
+  "scalars": []
+}

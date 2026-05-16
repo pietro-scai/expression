@@ -1,0 +1,15 @@
+{
+  "$comment": "Local marketplace descriptor for installing this plugin during dev. Register with `/plugin marketplace add <path-to-this-file>` inside Claude Code, then `/plugin install model@model-dev`.",
+  "name": "model-dev",
+  "description": "Local development marketplace for the `model` plugin.",
+  "owner": {
+    "name": "Pietro Casella"
+  },
+  "plugins": [
+    {
+      "name": "model",
+      "source": ".",
+      "description": "Spreadsheet-as-DAG modeling skills and slash commands."
+    }
+  ]
+}

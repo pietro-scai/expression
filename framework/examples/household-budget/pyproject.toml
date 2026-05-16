@@ -1,0 +1,16 @@
+[project]
+name = "household-budget"
+version = "0.1.0"
+description = "Multi-model example: SalaryModel + BudgetModel connected via depends()"
+requires-python = ">=3.11"
+dependencies = [
+    "pytest>=9.0.3",
+    "sweet",
+]
+
+[tool.uv.sources]
+sweet = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

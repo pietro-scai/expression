@@ -1,0 +1,20 @@
+{
+  "$comment": "Catalog entry for the Anthropic plugin marketplace. Submit at https://claude.ai/settings/plugins/submit. Schema is provisional — refine against the official submission requirements before publishing.",
+  "name": "sweet",
+  "version": "0.1.0",
+  "summary": "Spreadsheet-as-DAG modeling skills and commands for the `sweet` CLI.",
+  "description": "Build, iterate on, and export financial / planning models written as Python DAGs. Ships eight skills (bottom-up modeling, parameter elicitation, override discipline, circularity resolution, Excel fidelity, import-excel, small-step iteration, harness adapter) plus slash commands wrapping `sweet run`, `diff`, `show`, `explain`, and `export`.",
+  "author": {
+    "name": "Pietro Casella"
+  },
+  "repository": "https://github.com/pcasella/amsterdam",
+  "homepage": "https://github.com/pcasella/amsterdam#readme",
+  "license": "MIT",
+  "manifest": "plugins/claude/.claude-plugin/plugin.json",
+  "categories": ["productivity", "developer-tools", "finance"],
+  "keywords": ["spreadsheet", "modeling", "excel", "finance", "dag", "python"],
+  "requires": {
+    "binary": "sweet",
+    "install": "uv tool install sweet"
+  }
+}
