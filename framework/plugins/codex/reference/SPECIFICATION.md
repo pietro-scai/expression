@@ -1,1 +1,1 @@
-../../../SPECIFICATION.md
+../../../specifications/SPECIFICATION.md
