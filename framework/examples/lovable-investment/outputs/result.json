@@ -1,0 +1,236 @@
+{
+  "models": [
+    {
+      "model": {
+        "name": "LovableInvestment",
+        "doc": "Lovable Investment Return Forecast (2026-2030).\nEntry: Series B @ $6.6B valuation, ~$400M ARR (Feb 2026).\nUses a 'scenarios' dimension for Bear / Base / Bull.",
+        "axes": {
+          "time": {
+            "kind": "periods",
+            "values": [
+              2026,
+              2027,
+              2028,
+              2029,
+              2030
+            ]
+          },
+          "scenarios": {
+            "kind": "dim",
+            "values": [
+              "Bear",
+              "Base",
+              "Bull"
+            ]
+          }
+        }
+      },
+      "inputs": {
+        "investment_usd": {
+          "value": 100000,
+          "default": 100000,
+          "type": "int",
+          "doc": "Amount invested at Series B ($)"
+        },
+        "entry_valuation": {
+          "value": 6600,
+          "default": 6600,
+          "type": "int",
+          "doc": "Series B valuation at entry ($M)"
+        },
+        "arr_at_entry": {
+          "value": 400,
+          "default": 400,
+          "type": "int",
+          "doc": "Lovable ARR at time of investment ($M) \u2014 Feb 2026"
+        }
+      },
+      "tables": [
+        {
+          "name": "arr",
+          "kind": "row",
+          "doc": "Lovable ARR ($M) by year and scenario.",
+          "depends_on": [
+            "arr_at_entry"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Bear",
+                "Base",
+                "Bull"
+              ]
+            }
+          ],
+          "results": {
+            "2026,Bear": 640.0,
+            "2026,Base": 800.0,
+            "2026,Bull": 1000.0,
+            "2027,Bear": 1024.0,
+            "2027,Base": 1600.0,
+            "2027,Bull": 2500.0,
+            "2028,Bear": 1638.4,
+            "2028,Base": 3200.0,
+            "2028,Bull": 6250.0,
+            "2029,Bear": 2621.4400000000005,
+            "2029,Base": 6400.0,
+            "2029,Bull": 15625.0,
+            "2030,Bear": 4194.304000000001,
+            "2030,Base": 12800.0,
+            "2030,Bull": 39062.5
+          }
+        },
+        {
+          "name": "valuation",
+          "kind": "row",
+          "doc": "Implied company valuation ($M) = ARR \u00d7 exit multiple.",
+          "depends_on": [
+            "arr"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Bear",
+                "Base",
+                "Bull"
+              ]
+            }
+          ],
+          "results": {
+            "2026,Bear": 9600.0,
+            "2026,Base": 20000.0,
+            "2026,Bull": 40000.0,
+            "2027,Bear": 15360.0,
+            "2027,Base": 40000.0,
+            "2027,Bull": 100000.0,
+            "2028,Bear": 24576.0,
+            "2028,Base": 80000.0,
+            "2028,Bull": 250000.0,
+            "2029,Bear": 39321.600000000006,
+            "2029,Base": 160000.0,
+            "2029,Bull": 625000.0,
+            "2030,Bear": 62914.56000000001,
+            "2030,Base": 320000.0,
+            "2030,Bull": 1562500.0
+          }
+        },
+        {
+          "name": "stake_value",
+          "kind": "row",
+          "doc": "Your stake value ($) = investment \u00d7 (valuation / entry_valuation).",
+          "depends_on": [
+            "entry_valuation",
+            "investment_usd",
+            "valuation"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Bear",
+                "Base",
+                "Bull"
+              ]
+            }
+          ],
+          "results": {
+            "2026,Bear": 145454.54545454547,
+            "2026,Base": 303030.30303030304,
+            "2026,Bull": 606060.6060606061,
+            "2027,Bear": 232727.2727272727,
+            "2027,Base": 606060.6060606061,
+            "2027,Bull": 1515151.5151515151,
+            "2028,Bear": 372363.63636363635,
+            "2028,Base": 1212121.2121212122,
+            "2028,Bull": 3787878.7878787876,
+            "2029,Bear": 595781.8181818182,
+            "2029,Base": 2424242.4242424243,
+            "2029,Bull": 9469696.96969697,
+            "2030,Bear": 953250.9090909093,
+            "2030,Base": 4848484.848484849,
+            "2030,Bull": 23674242.424242426
+          }
+        },
+        {
+          "name": "moic",
+          "kind": "row",
+          "doc": "Money-on-invested-capital multiple.",
+          "depends_on": [
+            "investment_usd",
+            "stake_value"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            },
+            {
+              "kind": "dim",
+              "values": [
+                "Bear",
+                "Base",
+                "Bull"
+              ]
+            }
+          ],
+          "results": {
+            "2026,Bear": 1.4545454545454548,
+            "2026,Base": 3.0303030303030303,
+            "2026,Bull": 6.0606060606060606,
+            "2027,Bear": 2.327272727272727,
+            "2027,Base": 6.0606060606060606,
+            "2027,Bull": 15.15151515151515,
+            "2028,Bear": 3.7236363636363636,
+            "2028,Base": 12.121212121212121,
+            "2028,Bull": 37.878787878787875,
+            "2029,Bear": 5.957818181818182,
+            "2029,Base": 24.242424242424242,
+            "2029,Bull": 94.6969696969697,
+            "2030,Bear": 9.532509090909093,
+            "2030,Base": 48.484848484848484,
+            "2030,Bull": 236.74242424242425
+          }
+        }
+      ],
+      "scalars": []
+    }
+  ]
+}

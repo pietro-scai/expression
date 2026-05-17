@@ -1,3 +1,4 @@
+@layer theme, base, clerk, components, utilities;
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -122,7 +123,7 @@
     @apply border-border outline-ring/50;
     }
   html, body {
-    @apply h-full overflow-hidden font-sans bg-background text-foreground;
+    @apply font-sans bg-background text-foreground;
     }
 }
 

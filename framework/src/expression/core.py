@@ -22,6 +22,7 @@ callable which caches per ``(row, period)`` so that recursive references like
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable, Iterator, Sequence
+from itertools import product as _product
 from typing import Any, ClassVar
 
 
@@ -518,6 +519,9 @@ class Model:
         """Return the series of values for a row across all periods."""
         if row_name not in self._rows:
             raise ModelError(f"Unknown row: {row_name}")
+        r = type(self)._rows[row_name]
+        if r.over is not None:
+            return [self._cells[(row_name, *idx)] for idx in _product(*r.over)]
         return [self._cells[(row_name, t)] for t in self.time]
 
     # -- display (Phase 3) -------------------------------------------------
@@ -530,10 +534,9 @@ class Model:
         """
         self._check_displayable()
         periods_list = list(self.time)
-        formatted: list[tuple[str, list[str]]] = [
-            (name, [_fmt_value(self._cells.get((name, t))) for t in periods_list])
-            for name in self._rows
-        ]
+        formatted: list[tuple[str, list[str]]] = []
+        for name, r in type(self)._rows.items():
+            formatted.extend(_expand_row_for_display(self._cells, name, r, periods_list))
         name_w = max((len(n) for n in self._rows), default=1)
         col_widths = [
             max([len(str(t)), *(len(vals[i]) for _, vals in formatted)])
@@ -566,8 +569,9 @@ class Model:
         buf = io.StringIO()
         w = csv.writer(buf, lineterminator="\n")
         w.writerow(["", *(str(t) for t in periods_list)])
-        for name in self._rows:
-            w.writerow([name, *(self._cells.get((name, t)) for t in periods_list)])
+        for name, r in type(self)._rows.items():
+            for label, vals in _expand_row_for_display(self._cells, name, r, periods_list):
+                w.writerow([label, *vals])
         if self._scalars:
             w.writerow([])
             for sname in self._scalars:
@@ -624,6 +628,35 @@ def _fmt_value(v: Any) -> str:
             return str(int(v))
         return f"{v:.6g}"
     return str(v)
+
+
+def _expand_row_for_display(
+    cells: dict[tuple[Any, ...], Any],
+    name: str,
+    r: "Row",
+    periods_list: list[Any],
+) -> list[tuple[str, list[str]]]:
+    """Return display sub-rows for a row, expanding non-time axes into separate lines."""
+    if r.over is None:
+        return [(name, [_fmt_value(cells.get((name, t))) for t in periods_list])]
+
+    # Find the Periods axis position so time stays on columns.
+    time_pos = next((i for i, a in enumerate(r.over) if isinstance(a, Periods)), None)
+    if time_pos is None:
+        return [(name, [_fmt_value(None)] * len(periods_list))]
+
+    other_axes = [a for i, a in enumerate(r.over) if i != time_pos]
+    result: list[tuple[str, list[str]]] = []
+    combos = list(_product(*other_axes)) if other_axes else [()]
+    for combo in combos:
+        label = f"{name}[{','.join(str(c) for c in combo)}]" if combo else name
+        vals: list[str] = []
+        for t in periods_list:
+            idx: list[Any] = list(combo)
+            idx.insert(time_pos, t)
+            vals.append(_fmt_value(cells.get((name, *idx))))
+        result.append((label, vals))
+    return result
 
 
 def _check_cross_model_cycle(cls: type[Model]) -> None:
