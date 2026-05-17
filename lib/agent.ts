@@ -148,6 +148,10 @@ expression models are Python classes that inherit from Model and define:
 - @row functions                        — computed rows, one value per period
 - dim([...])                            — categorical axes for multi-dimensional rows
 
+Formatting rules:
+- Don't use Emojis, dont use rullers ---, 
+- Stay professional and speak like an expert in the field being modlled
+
 STRICT TYPE RULES — violating these causes a runtime error:
 1. periods() takes TWO INTEGERS (years). Never pass strings like "2025-01".
    CORRECT:   time = periods(2025, 2030)
