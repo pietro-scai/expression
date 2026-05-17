@@ -316,7 +316,7 @@ const renderChartInputSchema = z.object({
     .min(1)
     .describe("One entry per numeric data series to plot"),
   data: z
-    .array(z.record(z.union([z.string(), z.number()])))
+    .array(z.record(z.string(), z.union([z.string(), z.number()])))
     .min(1)
     .describe(
       "Array of data points. Each object must contain the xKey field and every series key."
