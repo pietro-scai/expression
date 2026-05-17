@@ -4,7 +4,7 @@
 
 Excel workbooks are multi-sheet. Each sheet is a logical layer: one sheet for salary assumptions, another for the budget, a third for a P&L summary. Users naturally model in layers, and the tool needs to support that idiom without forcing file proliferation.
 
-Previously, `sweet run` enforced exactly **one `Model` subclass per file**. Adding a second class caused an error:
+Previously, `expression run` enforced exactly **one `Model` subclass per file**. Adding a second class caused an error:
 
 ```
 ✗ Phase 0 expects exactly one Model subclass per file. Found: SalaryModel, BudgetModel
@@ -14,9 +14,9 @@ This forced users into a multi-file layout even for tightly coupled layers, whic
 
 ## Decision
 
-Remove the single-model constraint. `sweet run` now:
+Remove the single-model constraint. `expression run` now:
 
-1. **Discovers** all `Model` subclasses in `sweet.py`.
+1. **Discovers** all `Model` subclasses in `expression.py`.
 2. **Builds a cross-model DAG** from `depends()` declarations between models in the same file.
 3. **Topologically sorts** the graph — upstream models are solved before downstream ones.
 4. **Warns on cycles** — if the cross-model graph has a cycle, exits non-zero with the cycle path.
@@ -29,11 +29,11 @@ Remove the single-model constraint. `sweet run` now:
 
 `depends()` is the data bridge — it gives a model instance access to another model's solved cells. Without it there's no mechanism for `self.salary.gross(t)` to resolve. The change is not about removing `depends()`; it's about removing the restriction that only one model can exist per file.
 
-What changes: you no longer need to designate a root model or list models in order. `sweet run` infers the order from `depends()` declarations automatically.
+What changes: you no longer need to designate a root model or list models in order. `expression run` infers the order from `depends()` declarations automatically.
 
 ### DAG scope: same-file only
 
-The cross-model DAG built for ordering considers only models found in the current `sweet.py`. External models (imported from sister files) are resolved lazily by `Depends.__get__()` as before. This keeps the ordering logic simple: no transitive cross-file graph traversal needed.
+The cross-model DAG built for ordering considers only models found in the current `expression.py`. External models (imported from sister files) are resolved lazily by `Depends.__get__()` as before. This keeps the ordering logic simple: no transitive cross-file graph traversal needed.
 
 ### Output shape: always `{"models": [...]}`
 
@@ -64,13 +64,13 @@ Without `model`, the override applies to every model that has a matching row or 
 
 ### Snapshots: `ModelName.` prefix for multi-model
 
-When multiple models are present, `sweet snapshot accept` writes keys prefixed by model class name: `SalaryModel.gross[2025]`. Single-model snapshots retain the flat format `gross[2025]` for backward compatibility.
+When multiple models are present, `expression snapshot accept` writes keys prefixed by model class name: `SalaryModel.gross[2025]`. Single-model snapshots retain the flat format `gross[2025]` for backward compatibility.
 
 ### `show` command: qualified names
 
 ```bash
-sweet show 'gross[2025]'             # searches all models
-sweet show 'SalaryModel.gross[2025]' # scoped to SalaryModel
+expression show 'gross[2025]'             # searches all models
+expression show 'SalaryModel.gross[2025]' # scoped to SalaryModel
 ```
 
 The qualified form uses the syntax `ModelName.row_name[period]`.
@@ -97,18 +97,18 @@ ModelError: Circular cross-model dependency: A -> B -> A
 - Multi-file layout — import + `depends()` continues to work.
 - Agent loop, skills, harnesses — work identically; the agent sees the combined `result.json`.
 - Excel import/export — single-model operations, unchanged.
-- `sweet explain` and `sweet doc sync` — operate on the last (root) model in topo order.
+- `expression explain` and `expression doc sync` — operate on the last (root) model in topo order.
 
 ## Files changed
 
 | File | Change |
 |---|---|
-| `src/sweet/cli.py` | `_load_all_models()` replaces `_load_user_model()` as the primary loader; `run`, `show`, `print`, `describe`, `diff`, `snapshot accept`, `overrides add/rm` updated |
-| `src/sweet/output.py` | `to_json_multi()` and `describe_models()` added; `describe_model()` becomes a shim |
-| `src/sweet/snapshot.py` | `serialize_cells_multi()` added |
-| `src/sweet/overrides.py` | `Override` gains `model: str | None` field; `write_overrides` and `read_overrides` updated |
+| `src/expression/cli.py` | `_load_all_models()` replaces `_load_user_model()` as the primary loader; `run`, `show`, `print`, `describe`, `diff`, `snapshot accept`, `overrides add/rm` updated |
+| `src/expression/output.py` | `to_json_multi()` and `describe_models()` added; `describe_model()` becomes a shim |
+| `src/expression/snapshot.py` | `serialize_cells_multi()` added |
+| `src/expression/overrides.py` | `Override` gains `model: str | None` field; `write_overrides` and `read_overrides` updated |
 | `tests/test_multimodel.py` | New: 16 test cases |
 | `tests/test_phase0.py` | Updated `result.json` access to use `result["models"][0]` |
 | `docs/DOCS.md` | New chapter 13 "Multiple models in one file" |
 | `specifications/SPECIFICATION.md` | New §3.9 |
-| `src/sweet/skills/sweet-framework/SKILL.md` | Updated workspace layout and CLI surface |
+| `src/expression/skills/expression-framework/SKILL.md` | Updated workspace layout and CLI surface |

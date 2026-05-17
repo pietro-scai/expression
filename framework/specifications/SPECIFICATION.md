@@ -213,10 +213,10 @@ class PnL(Model):
 
 ### 3.9 Multiple models in one file
 
-A single `sweet.py` may contain **any number of `Model` subclasses**. `sweet run` discovers all of them, builds a cross-model dependency graph from `depends()` declarations, topologically sorts the graph, and solves every model in dependency order. No "entry point" is needed.
+A single `expression.py` may contain **any number of `Model` subclasses**. `expression run` discovers all of them, builds a cross-model dependency graph from `depends()` declarations, topologically sorts the graph, and solves every model in dependency order. No "entry point" is needed.
 
 ```python
-# sweet.py — two models in one file
+# expression.py — two models in one file
 class Salary(Model):
     time        = periods(2025, 2030)
     base_salary = glob(55_000.0)
@@ -237,14 +237,14 @@ class Budget(Model):
 
 - All `Model` subclasses in the file are collected.
 - A directed graph is built: for each `depends(Upstream)` where `Upstream` is also in the file, an edge `Upstream → Dependent` is added.
-- The graph is topologically sorted. If a cycle exists, `sweet run` exits with a descriptive error naming the cycle.
+- The graph is topologically sorted. If a cycle exists, `expression run` exits with a descriptive error naming the cycle.
 - Models with no inter-dependencies are processed in definition order.
 
 **Output shape:** `outputs/result.json` always uses `{"models": [...]}` with one entry per model. `outputs/model.json` similarly lists all models.
 
 **Overrides scoping:** `overrides.toml` entries may carry an optional `model` field to restrict application to a named `Model` class. Without it, the override applies to every model that has a matching row or glob.
 
-**Multi-file:** Unchanged. `import` the upstream file and declare `depends()` — `sweet run` in the downstream workspace discovers and solves the one `Model` in that file, resolving the upstream lazily as before.
+**Multi-file:** Unchanged. `import` the upstream file and declare `depends()` — `expression run` in the downstream workspace discovers and solves the one `Model` in that file, resolving the upstream lazily as before.
 
 ---
 

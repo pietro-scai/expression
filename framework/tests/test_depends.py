@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from sweet import Model, ModelError, depends, glob, periods, row
+from expression import Model, ModelError, depends, glob, periods, row
 
 
 class Costs(Model):
@@ -56,7 +56,7 @@ def test_depends_circular_detected():
     Python forces a definition order, so we build A first, then B(depends A), then
     inject a back-edge A→B by mutating ``A._depends`` and re-running the check.
     """
-    from sweet.core import Depends, _check_cross_model_cycle
+    from expression.core import Depends, _check_cross_model_cycle
 
     class CycA(Model):
         time = periods(2024, 2025)

@@ -24,7 +24,7 @@ export const useSandboxStore = create<SandboxStore>()(
       clear: () => set({ sandboxId: null, status: "unknown" }),
     }),
     {
-      name: "sweet-sandbox",
+      name: "expression-sandbox",
       partialize: (state) => ({
         sandboxId: state.sandboxId,
         snapshotId: state.snapshotId,

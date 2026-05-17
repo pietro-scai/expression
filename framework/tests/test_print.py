@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from sweet import Model, ModelError, glob, periods, row, scalar
+from expression import Model, ModelError, glob, periods, row, scalar
 
 
 class Budget(Model):

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from sweet import Tracer
+from expression import Tracer
 
 
 def test_tracer_writes_jsonlines(tmp_path: Path) -> None:

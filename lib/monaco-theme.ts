@@ -1,7 +1,7 @@
 import type { Monaco } from "@monaco-editor/react";
 
-const THEME_LIGHT = "sweet-light";
-const THEME_DARK = "sweet-dark";
+const THEME_LIGHT = "expression-light";
+const THEME_DARK = "expression-dark";
 
 const FALLBACK = {
   light: {

@@ -8,10 +8,10 @@ from pathlib import Path
 
 import pytest
 
-from sweet import Model, depends, glob, periods, row, scalar
-from sweet.core import ModelError
-from sweet.output import describe_models, to_json, to_json_multi
-from sweet.snapshot import serialize_cells, serialize_cells_multi
+from expression import Model, depends, glob, periods, row, scalar
+from expression.core import ModelError
+from expression.output import describe_models, to_json, to_json_multi
+from expression.snapshot import serialize_cells, serialize_cells_multi
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +157,7 @@ def test_describe_models_has_mermaid():
 
 def test_describe_model_shim():
     """describe_model() still works as a single-model shim."""
-    from sweet.output import describe_model
+    from expression.output import describe_model
 
     a = Alpha()
     out = describe_model(a)
@@ -195,7 +195,7 @@ def test_serialize_cells_single_no_prefix():
 
 
 def _write_temp_model(tmp_path: Path, source: str) -> Path:
-    p = tmp_path / "sweet.py"
+    p = tmp_path / "expression.py"
     p.write_text(textwrap.dedent(source))
     return p
 
@@ -203,7 +203,7 @@ def _write_temp_model(tmp_path: Path, source: str) -> Path:
 def test_topo_sort_via_loader(tmp_path):
     """Models with depends() are solved in dependency order."""
     src = """
-    from sweet import Model, glob, periods, row, depends
+    from expression import Model, glob, periods, row, depends
 
     class Upstream(Model):
         time = periods(2024, 2025)
@@ -222,7 +222,7 @@ def test_topo_sort_via_loader(tmp_path):
             return self.up.val(t) * 2
     """
     model_path = _write_temp_model(tmp_path, src)
-    from sweet.cli import _load_all_models
+    from expression.cli import _load_all_models
 
     models = _load_all_models(model_path)
     assert len(models) == 2
@@ -233,7 +233,7 @@ def test_topo_sort_via_loader(tmp_path):
 def test_two_independent_models_both_loaded(tmp_path):
     """Two unrelated models are both discovered and returned."""
     src = """
-    from sweet import Model, glob, periods, row
+    from expression import Model, glob, periods, row
 
     class ModelA(Model):
         time = periods(2024, 2025)
@@ -246,7 +246,7 @@ def test_two_independent_models_both_loaded(tmp_path):
         def y(self, t): return t * 2
     """
     model_path = _write_temp_model(tmp_path, src)
-    from sweet.cli import _load_all_models
+    from expression.cli import _load_all_models
 
     models = _load_all_models(model_path)
     assert len(models) == 2
@@ -257,8 +257,8 @@ def test_two_independent_models_both_loaded(tmp_path):
 def test_circular_cross_model_raises(tmp_path):
     """A circular depends() chain raises ModelError with cycle info."""
     src = """
-    from sweet import Model, glob, periods, row
-    from sweet.core import Depends, _check_cross_model_cycle, ModelError
+    from expression import Model, glob, periods, row
+    from expression.core import Depends, _check_cross_model_cycle, ModelError
 
     class CycA(Model):
         time = periods(2024, 2025)
@@ -271,12 +271,12 @@ def test_circular_cross_model_raises(tmp_path):
         def y(self, t): return 1
 
     # inject a back-edge to create a cycle for testing the CLI-level detection
-    from sweet.core import Depends
+    from expression.core import Depends
     CycA._depends = {"b": Depends(CycB)}
     CycB._depends = {"a": Depends(CycA)}
     """
     model_path = _write_temp_model(tmp_path, src)
-    from sweet.cli import _load_all_models
+    from expression.cli import _load_all_models
 
     with pytest.raises(ModelError, match="Circular dependency between models"):
         _load_all_models(model_path)
@@ -310,7 +310,7 @@ def test_combined_solve_and_output():
 
 def test_override_model_scope(tmp_path):
     """Override scoped to ModelA does not affect ModelB."""
-    from sweet.overrides import Override, apply_overrides
+    from expression.overrides import Override, apply_overrides
 
     class MA(Model):
         time = periods(2024, 2025)

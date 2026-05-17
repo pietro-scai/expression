@@ -1,6 +1,6 @@
 {
-  "name": "sweet",
-  "description": "Spreadsheet-as-DAG modeling skills and slash commands for the `sweet` CLI.",
+  "name": "expression",
+  "description": "Spreadsheet-as-DAG modeling skills and slash commands for the `expression` CLI.",
   "author": {
     "name": "Pietro Casella"
   }

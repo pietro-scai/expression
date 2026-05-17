@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { APIError, type Sandbox, StreamError } from "@vercel/sandbox";
+import { webSearch } from "@exalabs/ai-sdk";
 import type { ModelSnapshot } from "./model-types";
 import type { ChartSpec } from "./chart-types";
 
@@ -98,9 +99,9 @@ async function loadModelJson(
 export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
   return {
     description:
-      "Write the complete sweet.py model file. Automatically runs sweet describe and sweet run, returning snapshots with both structure and solved values so the UI stays in sync.",
+      "Write the complete expression.py model file. Automatically runs expression describe and expression run, returning snapshots with both structure and solved values so the UI stays in sync.",
     inputSchema: z.object({
-      content: z.string().describe("Complete content for workspace/sweet.py"),
+      content: z.string().describe("Complete content for workspace/expression.py"),
     }),
     execute: async ({
       content,
@@ -108,17 +109,21 @@ export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
       content: string;
     }): Promise<ModelSnapshot[] | { sandboxGone: true; error: string }> => {
       try {
-        await sandbox.writeFiles([{ path: "workspace/sweet.py", content }]);
+        await sandbox.writeFiles([{ path: "workspace/expression.py", content }]);
 
-        const describe = await runCmd(sandbox, "/tmp/sweet-venv/bin/python", [
-          "-m", "sweet",
+        const describe = await runCmd(sandbox, "/tmp/expression-venv/bin/python", [
+          "-m", "expression",
           "describe",
-          "--model", "workspace/sweet.py",
+          "--model", "workspace/expression.py",
         ]);
+
+        let cmdLog = `=== describe (exit ${describe.exitCode}) ===\n${describe.stdout}`;
+        if (describe.stderr) cmdLog += `\nSTDERR: ${describe.stderr}`;
 
         if (describe.exitCode !== 0) {
           return [{
             source: content,
+            cmdLog,
             execution: {
               status: "error",
               message: describe.stderr || describe.stdout,
@@ -128,19 +133,51 @@ export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
 
         const { definitions, raw: rawModelJson } = await loadModelJson(sandbox);
 
-        // Also run the model so definition and results are always in sync.
+        const run = await runCmd(sandbox, "/tmp/expression-venv/bin/python", [
+          "-m", "expression",
+          "run",
+          "--model", "workspace/expression.py",
+        ]);
+
+        cmdLog += `\n\n=== run (exit ${run.exitCode}) ===\n${run.stdout}`;
+        if (run.stderr) cmdLog += `\nSTDERR: ${run.stderr}`;
+
+        if (run.exitCode !== 0) {
+          return [{
+            source: content,
+            cmdLog,
+            execution: {
+              status: "error",
+              message: `expression run failed (exit ${run.exitCode}):\n${run.stderr || run.stdout}`,
+            },
+          }];
+        }
+
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let executionModels: any[] = [];
-        const run = await runCmd(sandbox, "/tmp/sweet-venv/bin/python", [
-          "-m", "sweet",
-          "run",
-          "--model", "workspace/sweet.py",
-        ]);
-        if (run.exitCode === 0) {
-          try {
-            const json = await readFile(sandbox, "workspace/outputs/result.json");
-            executionModels = JSON.parse(json)?.models ?? [];
-          } catch {}
+        try {
+          const json = await readFile(sandbox, "workspace/outputs/result.json");
+          executionModels = JSON.parse(json)?.models ?? [];
+        } catch {
+          return [{
+            source: content,
+            cmdLog,
+            execution: {
+              status: "error",
+              message: `expression run exited 0 but result.json is missing or unreadable.\nstdout: ${run.stdout}\nstderr: ${run.stderr}`,
+            },
+          }];
+        }
+
+        if (executionModels.length === 0) {
+          return [{
+            source: content,
+            cmdLog,
+            execution: {
+              status: "error",
+              message: `expression run succeeded but result.json contains no models.\nstdout: ${run.stdout}\nstderr: ${run.stderr}`,
+            },
+          }];
         }
 
         return definitions.map((definition, i) => {
@@ -149,6 +186,7 @@ export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
             source: content,
             definition,
             rawModelJson,
+            cmdLog,
             ...(modelData
               ? {
                   execution: {
@@ -172,21 +210,25 @@ export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
 export function createRunModelTool(sandbox: Sandbox, onGone: () => void) {
   return {
     description:
-      "Solve the current model with sweet run. Returns execution results (solved values or error) and updates the UI panel.",
+      "Solve the current model with expression run. Returns execution results (solved values or error) and updates the UI panel.",
     inputSchema: z.object({}),
     execute: async (): Promise<ModelSnapshot[] | { sandboxGone: true; error: string }> => {
       try {
-        const source = await readFile(sandbox, "workspace/sweet.py");
+        const source = await readFile(sandbox, "workspace/expression.py");
 
-        const run = await runCmd(sandbox, "/tmp/sweet-venv/bin/python", [
-          "-m", "sweet",
+        const run = await runCmd(sandbox, "/tmp/expression-venv/bin/python", [
+          "-m", "expression",
           "run",
-          "--model", "workspace/sweet.py",
+          "--model", "workspace/expression.py",
         ]);
+
+        let cmdLog = `=== run (exit ${run.exitCode}) ===\n${run.stdout}`;
+        if (run.stderr) cmdLog += `\nSTDERR: ${run.stderr}`;
 
         if (run.exitCode !== 0) {
           return [{
             source,
+            cmdLog,
             execution: {
               status: "error",
               message: run.stderr || run.stdout,
@@ -200,13 +242,36 @@ export function createRunModelTool(sandbox: Sandbox, onGone: () => void) {
           const json = await readFile(sandbox, "workspace/outputs/result.json");
           // result.json has the same { models: [...] } envelope as model.json
           executionModels = JSON.parse(json)?.models ?? [];
-        } catch {}
+        } catch {
+          return [{
+            source,
+            cmdLog,
+            execution: {
+              status: "error",
+              message: `expression run exited 0 but result.json is missing or unreadable.\nstdout: ${run.stdout}\nstderr: ${run.stderr}`,
+            },
+          }];
+        }
 
-        await runCmd(sandbox, "/tmp/sweet-venv/bin/python", [
-          "-m", "sweet",
+        if (executionModels.length === 0) {
+          return [{
+            source,
+            cmdLog,
+            execution: {
+              status: "error",
+              message: `expression run succeeded but result.json contains no models.\nstdout: ${run.stdout}\nstderr: ${run.stderr}`,
+            },
+          }];
+        }
+
+        const describe = await runCmd(sandbox, "/tmp/expression-venv/bin/python", [
+          "-m", "expression",
           "describe",
-          "--model", "workspace/sweet.py",
+          "--model", "workspace/expression.py",
         ]);
+        cmdLog += `\n\n=== describe (exit ${describe.exitCode}) ===\n${describe.stdout}`;
+        if (describe.stderr) cmdLog += `\nSTDERR: ${describe.stderr}`;
+
         const { definitions, raw: rawModelJson } = await loadModelJson(sandbox);
 
         // Zip definitions with per-model execution data by index.
@@ -216,6 +281,7 @@ export function createRunModelTool(sandbox: Sandbox, onGone: () => void) {
             source,
             definition,
             rawModelJson,
+            cmdLog,
             execution: {
               status: "ok" as const,
               inputs: modelData?.inputs,
@@ -270,4 +336,8 @@ export function createRenderChartTool() {
       return input as ChartSpec;
     },
   };
+}
+
+export function createWebSearchTool() {
+  return webSearch();
 }

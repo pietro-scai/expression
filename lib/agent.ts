@@ -8,6 +8,7 @@ import {
   createUpdateModelTool,
   createRunModelTool,
   createRenderChartTool,
+  createWebSearchTool,
 } from "./tools";
 
 // Hobby plan hard cap is 2,700,000 ms (45 min). Pro/Enterprise allow up to 5 h.
@@ -128,6 +129,7 @@ async function initAgent(resumeSandboxId?: string): Promise<AgentState> {
     run_model: createRunModelTool(sandbox, markSandboxGone),
     bash: createBashTool(sandbox, markSandboxGone),
     render_chart: createRenderChartTool(),
+    webSearch: createWebSearchTool(),
   };
 
   const agent = new ToolLoopAgent({
@@ -138,9 +140,9 @@ async function initAgent(resumeSandboxId?: string): Promise<AgentState> {
         thinking: { type: "enabled", budgetTokens: 8000 },
       },
     },
-    instructions: `You are a sweet model builder — a collaborative assistant that helps users create financial and analytical models using the sweet Python DSL.
+    instructions: `You are an expression model builder — a collaborative assistant that helps users create financial and analytical models using the expression Python DSL.
 
-sweet models are Python classes that inherit from Model and define:
+expression models are Python classes that inherit from Model and define:
 - time = periods(start_year, end_year)  — integer years ONLY, e.g. periods(2024, 2029)
 - glob(default, doc="...")              — named scalar inputs / assumptions
 - @row functions                        — computed rows, one value per period
@@ -199,12 +201,12 @@ STRICT TYPE RULES — violating these causes a runtime error:
    WRONG:  return depends(SalaryModel).total_comp(t) + ...         ← inline depends()
    WRONG:  return self.salary.upstream().total_comp(t) + ...       ← .upstream() does not exist
 
-6. A single sweet.py can contain multiple Model subclasses. sweet run discovers all of them,
+6. A single expression.py can contain multiple Model subclasses. expression run discovers all of them,
    auto-resolves their dependency order via depends(), and solves them all.
    Circular cross-model deps raise a clear error.
 
 7. Avoid optional heavy Python dependencies inside model formulas unless already installed
-   in /tmp/sweet-venv. The default sandbox installs sweet's core deps only
+   in /tmp/expression-venv. The default sandbox installs expression's core deps only
    (networkx, openpyxl, typer). Prefer stdlib implementations for small helpers
    like IRR/root finding, or explicitly install the package before relying on it.
 
@@ -217,7 +219,7 @@ WORKFLOW
    - Never leave the model in a failing or un-run state when replying.
 4. Iterate on every subsequent change the same way:
    - ANY edit to the model → call update_model → mandatory, no exceptions.
-   - update_model automatically runs sweet describe AND sweet run and streams both
+   - update_model automatically runs expression describe AND expression run and streams both
      the model definition and the solved results to the panel.
    - Verify the returned snapshots (structure + values) before responding.
    - Do NOT call run_model after update_model — the run is already included.
@@ -240,8 +242,8 @@ BASH TOOL
 - A non-zero exitCode means the command failed — it does NOT mean the sandbox is gone.
   Only act on sandbox death when the tool returns { sandboxGone: true }.
 - Pre-installed: git, gh, ripgrep (rg), fd, jq, yq, fzf, bat, eza, tree, git-delta, direnv, brew
-- Python 3.11 venv: /tmp/sweet-venv/bin/python
-- Model file: workspace/sweet.py  |  Outputs: workspace/outputs/
+- Python 3.11 venv: /tmp/expression-venv/bin/python
+- Model file: workspace/expression.py  |  Outputs: workspace/outputs/
 
 After sandbox reinitiation the workspace is reset to empty. When the user asks to continue,
 call update_model to re-establish the current model from conversation history — it will
@@ -256,7 +258,12 @@ CHARTS
 - Choose chartType wisely: "line" for time-series trends, "bar" for period-over-period comparisons, "area" for cumulative or stacked quantities.
 - Keep series focused: 1-4 series per chart. If there are many rows, chart the most interesting ones.
 - The xKey should be the period (year). Each series key must exactly match a key in the data objects.
-- Only call render_chart when it adds genuine insight — not on every model run.`,
+- Only call render_chart when it adds genuine insight — not on every model run.
+
+WEB SEARCH
+- Use the webSearch tool ONLY when the user explicitly asks you to research assumptions, look up benchmarks, or find real-world data to ground the model (e.g. "look up typical SaaS churn rates", "research average CAC for B2B", "find industry margin benchmarks").
+- Do NOT use it proactively or for general questions you can answer from knowledge.
+- After searching, use the results to populate realistic glob values or explain assumption choices — never just dump the raw results.`,
   });
 
   return { agent, sandbox, sandboxId: sandbox.sandboxId };
@@ -303,14 +310,14 @@ async function provisionSandbox(sbx: Sandbox): Promise<void> {
   const setupScript = `#!/bin/bash
 set -e
 
-# ── Python / sweet ──────────────────────────────────────────────────────────
+# ── Python / expression ─────────────────────────────────────────────────────
 python3 -m ensurepip --upgrade 2>/dev/null || true
 python3 -m pip install --quiet uv
 python3 -m uv python install 3.11
-python3 -m uv venv --python 3.11 /tmp/sweet-venv
-python3 -m uv pip install --quiet --python /tmp/sweet-venv/bin/python 'networkx>=3.2' 'openpyxl>=3.1' 'typer>=0.12'
-SITE=$(/tmp/sweet-venv/bin/python -c 'import site; print(site.getsitepackages()[0])')
-echo "$(pwd)/framework/src" > "$SITE/sweet.pth"
+python3 -m uv venv --python 3.11 /tmp/expression-venv
+python3 -m uv pip install --quiet --python /tmp/expression-venv/bin/python 'networkx>=3.2' 'openpyxl>=3.1' 'typer>=0.12'
+SITE=$(/tmp/expression-venv/bin/python -c 'import site; print(site.getsitepackages()[0])')
+echo "$(pwd)/framework/src" > "$SITE/expression.pth"
 
 # ── System prereqs for Homebrew ─────────────────────────────────────────────
 export DEBIAN_FRONTEND=noninteractive
@@ -348,7 +355,7 @@ echo done`;
 
   await sbx.writeFiles([
     ...files,
-    { path: "workspace/sweet.py", content: "" },
+    { path: "workspace/expression.py", content: "" },
     { path: "workspace/outputs/.keep", content: "" },
     { path: "setup.sh", content: setupScript },
   ]);

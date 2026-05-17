@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from sweet.agent.skills import (
+from expression.agent.skills import (
     builtin_skills_dir,
     load_skill,
     load_skills,

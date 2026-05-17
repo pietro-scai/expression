@@ -7,8 +7,8 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-from sweet import Model, glob, periods, row
-from sweet.excel import export, verify
+from expression import Model, glob, periods, row
+from expression.excel import export, verify
 
 # ---------------------------------------------------------------------------
 # PRD example 12.1 — round trip

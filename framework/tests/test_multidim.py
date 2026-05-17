@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from sweet import Model, dim, matrix, periods, row
+from expression import Model, dim, matrix, periods, row
 
 
 class Pricing(Model):

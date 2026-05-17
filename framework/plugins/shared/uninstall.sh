@@ -8,9 +8,9 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-SKILLS_SRC="$REPO/src/sweet/skills"
+SKILLS_SRC="$REPO/src/expression/skills"
 CC_SKILLS="${HOME}/.claude/skills"
-CC_MARKETPLACE="${HOME}/.claude/plugins/marketplaces/sweet-dev"
+CC_MARKETPLACE="${HOME}/.claude/plugins/marketplaces/expression-dev"
 CC_KNOWN="${HOME}/.claude/plugins/known_marketplaces.json"
 
 # Remove installed skills
@@ -27,7 +27,7 @@ done
 # Remove marketplace directory
 if [[ -e "$CC_MARKETPLACE" || -L "$CC_MARKETPLACE" ]]; then
   rm -rf "$CC_MARKETPLACE"
-  echo "removed marketplace: sweet-dev"
+  echo "removed marketplace: expression-dev"
 fi
 
 # Remove from known_marketplaces.json
@@ -40,14 +40,14 @@ try:
 except (FileNotFoundError, json.JSONDecodeError):
     data = {}
 
-if "sweet-dev" in data:
-    del data["sweet-dev"]
+if "expression-dev" in data:
+    del data["expression-dev"]
     path.write_text(json.dumps(data, indent=2) + "\n")
-    print("unregistered sweet-dev from", path)
+    print("unregistered expression-dev from", path)
 else:
-    print("sweet-dev not found in", path, "(already clean)")
+    print("expression-dev not found in", path, "(already clean)")
 PYEOF
 
 echo ""
 echo "Done. If the plugin was installed in Claude Code, also run:"
-echo "  /plugin uninstall sweet"
+echo "  /plugin uninstall expression"

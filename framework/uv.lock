@@ -4,9 +4,9 @@ requires-python = ">=3.11"
 
 [manifest]
 members = [
+    "expression",
     "household-budget",
     "llm-revenue-compute",
-    "sweet",
 ]
 
 [[package]]
@@ -117,6 +117,42 @@ wheels = [
 ]
 
 [[package]]
+name = "expression"
+version = "0.1.0"
+source = { editable = "." }
+dependencies = [
+    { name = "networkx" },
+    { name = "openpyxl" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+agent = [
+    { name = "anthropic" },
+]
+dev = [
+    { name = "pyright" },
+    { name = "pytest" },
+    { name = "ruff" },
+]
+verify = [
+    { name = "formulas" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anthropic", marker = "extra == 'agent'", specifier = ">=0.40" },
+    { name = "formulas", marker = "extra == 'verify'", specifier = ">=1.2" },
+    { name = "networkx", specifier = ">=3.2" },
+    { name = "openpyxl", specifier = ">=3.1" },
+    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.350" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
+    { name = "typer", specifier = ">=0.12" },
+]
+provides-extras = ["dev", "verify", "agent"]
+
+[[package]]
 name = "formulas"
 version = "1.3.4"
 source = { registry = "https://pypi.org/simple" }
@@ -149,14 +185,14 @@ name = "household-budget"
 version = "0.1.0"
 source = { virtual = "examples/household-budget" }
 dependencies = [
+    { name = "expression" },
     { name = "pytest" },
-    { name = "sweet" },
 ]
 
 [package.metadata]
 requires-dist = [
+    { name = "expression", editable = "." },
     { name = "pytest", specifier = ">=9.0.3" },
-    { name = "sweet", editable = "." },
 ]
 
 [[package]]
@@ -875,42 +911,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/a2/87/a6771e1546d97e7e0
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e9/44/75a9c9421471a6c4805dbf2356f7c181a29c1879239abab1ea2cc8f38b40/sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2", size = 10235, upload-time = "2024-02-25T23:20:01.196Z" },
 ]
-
-[[package]]
-name = "sweet"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "networkx" },
-    { name = "openpyxl" },
-    { name = "typer" },
-]
-
-[package.optional-dependencies]
-agent = [
-    { name = "anthropic" },
-]
-dev = [
-    { name = "pyright" },
-    { name = "pytest" },
-    { name = "ruff" },
-]
-verify = [
-    { name = "formulas" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "anthropic", marker = "extra == 'agent'", specifier = ">=0.40" },
-    { name = "formulas", marker = "extra == 'verify'", specifier = ">=1.2" },
-    { name = "networkx", specifier = ">=3.2" },
-    { name = "openpyxl", specifier = ">=3.1" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1.350" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
-    { name = "typer", specifier = ">=0.12" },
-]
-provides-extras = ["dev", "verify", "agent"]
 
 [[package]]
 name = "tqdm"

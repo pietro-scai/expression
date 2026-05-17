@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from sweet import (
+from expression import (
     Model,
     ModelError,
     glob,
@@ -106,7 +106,7 @@ def test_multi_row_dependency_topo_order():
 def test_multi_row_topo_sort_picks_rev_before_gross_profit():
     import networkx as nx
 
-    from sweet.solver import build_dag
+    from expression.solver import build_dag
 
     m = PnL()
     g = build_dag(m)
@@ -173,7 +173,7 @@ def test_glob_default_and_override():
 
 
 def test_describe_tracks_module_global_dependencies():
-    from sweet.output import describe_model
+    from expression.output import describe_model
 
     desc = describe_model(ModuleGlobalBudget())
     model = desc["models"][0]
@@ -206,7 +206,7 @@ def _model_bin() -> str:
     when invoked via ``-m``. The console script in ``venv/bin/`` does not put
     cwd on sys.path, so the package import resolves correctly.
     """
-    bin_path = Path(sys.executable).parent / "sweet"
+    bin_path = Path(sys.executable).parent / "expression"
     if not bin_path.exists():
         pytest.skip(f"Console script not installed at {bin_path}")
     return str(bin_path)
@@ -226,8 +226,8 @@ def test_cli_init_run_show(tmp_path: Path):
     proc = _run_cli(["init", "demo"], tmp_path)
     assert proc.returncode == 0, proc.stderr
     demo = tmp_path / "demo"
-    assert (demo / "sweet.py").exists()
-    assert (demo / "sweet.md").exists()
+    assert (demo / "expression.py").exists()
+    assert (demo / "expression.md").exists()
 
     proc = _run_cli(["run"], demo)
     assert proc.returncode == 0, proc.stderr

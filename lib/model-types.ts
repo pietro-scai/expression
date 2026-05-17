@@ -80,6 +80,8 @@ export type ModelSnapshot = {
   source: string;
   definition?: ModelDefinition;
   execution?: ModelExecution;
-  /** Raw model.json string from the sandbox — exactly what sweet describe wrote. */
+  /** Raw model.json string from the sandbox — exactly what expression describe wrote. */
   rawModelJson?: string;
+  /** Raw stdout/stderr from describe + run commands, for debugging in the tool widget. */
+  cmdLog?: string;
 };

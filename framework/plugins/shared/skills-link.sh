@@ -21,7 +21,7 @@ case "$mode" in
 esac
 
 repo_root="$(cd "$(dirname "$0")/../.." && pwd)"
-src_skills="$repo_root/src/sweet/skills"
+src_skills="$repo_root/src/expression/skills"
 plugins=("claude" "codex")
 
 # Paths are relative to the plugins/<host>/{skills,reference}/ directories,
@@ -45,7 +45,7 @@ for plugin in "${plugins[@]}"; do
     skill_name="$(basename "$skill_dir")"
     if [[ "$mode" == "link" ]]; then
       # Relative path from plugins/<host>/skills/ back to repo root is ../../..
-      ln -s "../../../src/sweet/skills/$skill_name" "$skills_dst/$skill_name"
+      ln -s "../../../src/expression/skills/$skill_name" "$skills_dst/$skill_name"
     else
       cp -R "$skill_dir" "$skills_dst/$skill_name"
     fi

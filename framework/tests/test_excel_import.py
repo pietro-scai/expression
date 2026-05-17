@@ -11,8 +11,8 @@ import pytest
 from openpyxl import Workbook
 from openpyxl.workbook.defined_name import DefinedName
 
-from sweet.excel import export, import_xlsx
-from sweet.excel.import_ import render_plan, write_imported
+from expression.excel import export, import_xlsx
+from expression.excel.import_ import render_plan, write_imported
 
 
 def _build_simple_workbook(path: Path) -> None:
@@ -85,7 +85,7 @@ def test_imported_model_solves(tmp_path: Path):
     write_imported(plan, dest)
 
     # Load the generated model.py and verify it solves.
-    spec = importlib.util.spec_from_file_location("imported_test_module", dest / "sweet.py")
+    spec = importlib.util.spec_from_file_location("imported_test_module", dest / "expression.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["imported_test_module"] = module
@@ -106,7 +106,7 @@ def test_import_then_export_roundtrip(tmp_path: Path):
     dest = tmp_path / "demo"
     write_imported(plan, dest)
 
-    spec = importlib.util.spec_from_file_location("imported_rt", dest / "sweet.py")
+    spec = importlib.util.spec_from_file_location("imported_rt", dest / "expression.py")
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     sys.modules["imported_rt"] = module
@@ -140,7 +140,7 @@ def test_import_handles_missing_time_axis(tmp_path: Path):
 
 
 def _model_bin() -> str:
-    bin_path = Path(sys.executable).parent / "sweet"
+    bin_path = Path(sys.executable).parent / "expression"
     if not bin_path.exists():
         pytest.skip(f"Console script not installed at {bin_path}")
     return str(bin_path)
@@ -170,5 +170,5 @@ def test_cli_export_and_import(tmp_path: Path):
         capture_output=True, text=True, check=False,
     )
     assert proc.returncode == 0, proc.stderr
-    assert (tmp_path / "reimported" / "sweet.py").exists()
-    assert (tmp_path / "reimported" / "sweet.md").exists()
+    assert (tmp_path / "reimported" / "expression.py").exists()
+    assert (tmp_path / "reimported" / "expression.md").exists()

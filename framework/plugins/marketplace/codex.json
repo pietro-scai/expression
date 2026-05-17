@@ -1,8 +1,8 @@
 {
   "$comment": "Catalog entry for the Codex plugin marketplace. Submission process per https://developers.openai.com/codex/plugins/build. Schema is provisional — refine against the official submission requirements before publishing.",
-  "name": "sweet",
+  "name": "expression",
   "version": "0.1.0",
-  "summary": "Spreadsheet-as-DAG modeling skills for the `sweet` CLI.",
+  "summary": "Spreadsheet-as-DAG modeling skills for the `expression` CLI.",
   "description": "Build, iterate on, and export financial / planning models written as Python DAGs. Ships the same eight modeling skills as the Claude Code plugin.",
   "author": {
     "name": "Pietro Casella"
@@ -14,7 +14,7 @@
   "categories": ["productivity", "developer-tools", "finance"],
   "keywords": ["spreadsheet", "modeling", "excel", "finance", "dag", "python"],
   "requires": {
-    "binary": "sweet",
-    "install": "uv tool install sweet"
+    "binary": "expression",
+    "install": "uv tool install expression"
   }
 }

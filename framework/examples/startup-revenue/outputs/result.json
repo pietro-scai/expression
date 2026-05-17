@@ -1,0 +1,157 @@
+{
+  "models": [
+    {
+      "model": {
+        "name": "StartupRevenue",
+        "doc": "Startup revenue projection with 20% monthly compounding growth (2025\u20132030).",
+        "axes": {
+          "time": {
+            "kind": "periods",
+            "values": [
+              2025,
+              2026,
+              2027,
+              2028,
+              2029,
+              2030
+            ]
+          }
+        }
+      },
+      "inputs": {
+        "seed_revenue": {
+          "value": 120,
+          "default": 120,
+          "type": "int",
+          "doc": "Starting annual revenue in 2025 ($K)"
+        },
+        "monthly_growth": {
+          "value": 0.2,
+          "default": 0.2,
+          "type": "float",
+          "doc": "Monthly revenue growth rate (0.20 = 20%)"
+        }
+      },
+      "tables": [
+        {
+          "name": "annual_growth_rate",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "monthly_growth"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 7.916100448255996,
+            "2026": 7.916100448255996,
+            "2027": 7.916100448255996,
+            "2028": 7.916100448255996,
+            "2029": 7.916100448255996,
+            "2030": 7.916100448255996
+          }
+        },
+        {
+          "name": "revenue",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "annual_growth_rate",
+            "seed_revenue"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 120,
+            "2026": 1069.9320537907195,
+            "2027": 9539.621664406892,
+            "2028": 85056.22499821089,
+            "2029": 758369.845833511,
+            "2030": 6761701.722379997
+          }
+        },
+        {
+          "name": "yoy_growth_pct",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "revenue"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 0,
+            "2026": 791.6100448255996,
+            "2027": 791.6100448255996,
+            "2028": 791.6100448255996,
+            "2029": 791.6100448255996,
+            "2030": 791.6100448255996
+          }
+        },
+        {
+          "name": "cumulative_revenue",
+          "kind": "row",
+          "doc": null,
+          "depends_on": [
+            "revenue"
+          ],
+          "columns": [
+            {
+              "kind": "periods",
+              "values": [
+                2025,
+                2026,
+                2027,
+                2028,
+                2029,
+                2030
+              ]
+            }
+          ],
+          "results": {
+            "2025": 120,
+            "2026": 1189.9320537907195,
+            "2027": 10729.55371819761,
+            "2028": 95785.7787164085,
+            "2029": 854155.6245499195,
+            "2030": 7615857.346929917
+          }
+        }
+      ],
+      "scalars": []
+    }
+  ]
+}

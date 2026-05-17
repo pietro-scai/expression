@@ -1,7 +1,7 @@
 {
-  "name": "sweet",
+  "name": "expression",
   "version": "0.1.0",
-  "description": "Spreadsheet-as-DAG modeling skills for the `sweet` CLI.",
+  "description": "Spreadsheet-as-DAG modeling skills for the `expression` CLI.",
   "author": {
     "name": "Pietro Casella"
   },

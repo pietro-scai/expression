@@ -34,6 +34,7 @@ import type { ModelSnapshot } from "@/lib/model-types";
 import type { ChartSpec } from "@/lib/chart-types";
 import { ChartRenderer } from "./chart-renderer";
 import { useSandboxStore } from "@/lib/sandbox-store";
+import { DEFAULT_THINKING_WORDS, useLogoStore } from "@/lib/logo-store";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import type { UIMessage } from "ai";
@@ -41,7 +42,7 @@ import { RefreshCwIcon, SparklesIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useModel } from "./model-context";
 
-// Tool names whose output is displayed in the right panel — suppress inline JSON.
+// Tool names whose output is displayed in the right panel — show compact summary, not raw JSON.
 const PANEL_TOOLS = new Set(["update_model", "run_model"]);
 
 // Tool names that render custom UI instead of raw JSON output.
@@ -51,6 +52,34 @@ function getToolName(part: Record<string, unknown>): string {
   if (part.type === "dynamic-tool") return String(part.toolName ?? "");
   const type = String(part.type ?? "");
   return type.startsWith("tool-") ? type.slice(5) : type;
+}
+
+function PanelToolSummary({ output }: { output: unknown }) {
+  if (!Array.isArray(output) || output.length === 0) return null;
+  const snapshots = output as ModelSnapshot[];
+  const errorSnap = snapshots.find((s) => s.execution?.status === "error");
+  const cmdLog = snapshots[0]?.cmdLog;
+  return (
+    <div className="space-y-2 text-xs">
+      {errorSnap ? (
+        <div className="rounded bg-destructive/10 p-2 font-mono text-destructive whitespace-pre-wrap">
+          {errorSnap.execution?.message}
+        </div>
+      ) : (
+        <div className="text-muted-foreground">
+          {snapshots.length} model{snapshots.length !== 1 ? "s" : ""} updated — results sent to panel
+        </div>
+      )}
+      {cmdLog && (
+        <details>
+          <summary className="cursor-pointer select-none text-muted-foreground hover:text-foreground">
+            Command output
+          </summary>
+          <pre className="mt-1 overflow-x-auto rounded bg-muted/50 p-2 text-xs">{cmdLog}</pre>
+        </details>
+      )}
+    </div>
+  );
 }
 
 function MessageParts({ parts }: { parts: UIMessage["parts"] }) {
@@ -123,11 +152,12 @@ function MessageParts({ parts }: { parts: UIMessage["parts"] }) {
               )}
               <ToolContent>
                 {part.input != null && <ToolInput input={part.input} />}
-                {!isPanel && (
-                  <ToolOutput
-                    output={part.output}
-                    errorText={part.errorText}
-                  />
+                {isPanel ? (
+                  part.state === "output-available" && part.output != null && (
+                    <PanelToolSummary output={part.output} />
+                  )
+                ) : (
+                  <ToolOutput output={part.output} errorText={part.errorText} />
                 )}
               </ToolContent>
             </Tool>
@@ -202,6 +232,7 @@ function SandboxStatusBar({ onReinitiate }: { onReinitiate: () => void }) {
 export function DashboardChat() {
   const { setSnapshot, setAllSnapshots } = useModel();
   const { setSandbox, setStatus, clear } = useSandboxStore();
+  const { startThinking, stopThinking } = useLogoStore();
 
   // Always read from the store at call time — never from a stale closure.
   const customFetch: typeof fetch = useCallback(
@@ -256,6 +287,15 @@ export function DashboardChat() {
     clear();
   }, [clear]);
 
+  useEffect(() => {
+    if (status === "submitted" || status === "streaming") {
+      startThinking(DEFAULT_THINKING_WORDS);
+      return;
+    }
+
+    stopThinking();
+  }, [startThinking, status, stopThinking]);
+
   // Extract the latest model snapshot and detect sandbox-gone signals from tool output.
   useEffect(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -284,7 +324,7 @@ export function DashboardChat() {
         }
       }
     }
-  }, [messages, setSnapshot, setStatus]);
+  }, [messages, setAllSnapshots, setSnapshot, setStatus]);
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -316,13 +356,20 @@ export function DashboardChat() {
           className="mx-auto max-w-3xl"
           onSubmit={({ text }) => {
             if (!text.trim()) return;
+            startThinking(DEFAULT_THINKING_WORDS);
             sendMessage({ text });
           }}
         >
           <PromptInputTextarea placeholder="Describe your model..." />
           <PromptInputFooter>
             <PromptInputTools />
-            <PromptInputSubmit onStop={stop} status={status} />
+            <PromptInputSubmit
+              onStop={() => {
+                stopThinking()
+                stop()
+              }}
+              status={status}
+            />
           </PromptInputFooter>
         </PromptInput>
       </div>

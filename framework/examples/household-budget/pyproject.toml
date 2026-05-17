@@ -5,11 +5,11 @@ description = "Multi-model example: SalaryModel + BudgetModel connected via depe
 requires-python = ">=3.11"
 dependencies = [
     "pytest>=9.0.3",
-    "sweet",
+    "expression",
 ]
 
 [tool.uv.sources]
-sweet = { workspace = true }
+expression = { workspace = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

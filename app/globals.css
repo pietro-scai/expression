@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@source "../node_modules/streamdown/dist/index.js";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -138,3 +139,85 @@
 [data-language] .monaco-editor .cdr.bracket-indent-guide {
   display: none !important;
 }
+
+
+/* Streamdown */
+/* Headings */
+/* [data-streamdown="heading-1"] { }
+[data-streamdown="heading-2"] { }
+[data-streamdown="heading-3"] { }
+[data-streamdown="heading-4"] { }
+[data-streamdown="heading-5"] { }
+[data-streamdown="heading-6"] { } */
+/* Text elements */
+/* [data-streamdown="strong"] { }
+[data-streamdown="link"] { }
+[data-streamdown="inline-code"] { } */
+/* Lists */
+/* [data-streamdown="ordered-list"] { }
+[data-streamdown="unordered-list"] { }
+[data-streamdown="list-item"] { } */
+/* Blocks */
+/* [data-streamdown="blockquote"] { }
+*/
+
+
+[data-streamdown="horizontal-rule"] { 
+  @apply hidden;
+
+} 
+
+
+
+
+/* Code */
+
+
+
+
+
+/* Remove line numbers  */
+[data-streamdown="code-block"] code > span::before {
+  content: none !important;
+  display: none !important;
+  margin-right: 0 !important;
+  width: 0 !important;
+}
+ [data-streamdown="code-block"] { 
+  @apply border-none! rounded-none! bg-transparent! whitespace-pre!;
+ }
+ 
+ 
+ /* [data-streamdown="code-block-header"]  {
+  @apply hidden!;
+ } */
+ /*
+[data-streamdown="mermaid-block"] { } */
+/* Tables */
+[data-streamdown="table-wrapper"] {
+  @apply border-none! p-0! m-0! mb-5! bg-transparent!;
+ }
+
+ [data-streamdown="table-wrapper"] > div:has(> [data-streamdown="table"]) {
+  @apply border-none! rounded-none!;
+}
+[data-streamdown="table-header"] { 
+  @apply bg-muted/40!;
+}
+
+ [data-streamdown="table"] { 
+    @apply border-none!;
+ }
+ /* [data-streamdown="table-row"] { 
+ } */
+
+/* [data-streamdown="table"] { }
+[data-streamdown="table-header"] { }
+
+[data-streamdown="table-row"] { }
+[data-streamdown="table-header-cell"] { }
+[data-streamdown="table-cell"] { }
+[data-streamdown="table-fullscreen"] { } */
+/* Other */
+/* [data-streamdown="superscript"] { }
+[data-streamdown="subscript"] { } */

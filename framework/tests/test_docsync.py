@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sweet import Model, glob, periods, row, scalar, xl
-from sweet.docsync import compare, extract_md_mentions, format_drift
+from expression import Model, glob, periods, row, scalar, xl
+from expression.docsync import compare, extract_md_mentions, format_drift
 
 
 class _M(Model):
@@ -29,7 +29,7 @@ def test_compare_in_sync() -> None:
     md = "Inputs: `growth_rate`. Output: `revenue[year]`. Scalar: `total`."
     drift = compare(_M(), md)
     assert drift.empty
-    assert format_drift(drift) == "✓ sweet.md is in sync with sweet.py"
+    assert format_drift(drift) == "✓ expression.md is in sync with expression.py"
 
 
 def test_compare_drift_in_code_not_md() -> None:

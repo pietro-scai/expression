@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from sweet import Model, ModelError, glob, periods, register, row, scalar, xl
+from expression import Model, ModelError, glob, periods, register, row, scalar, xl
 
 # ---------------------------------------------------------------------------
 # @scalar basics

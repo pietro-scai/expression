@@ -1,4 +1,4 @@
-# `sweet` — User Guide
+# `expression` — User Guide
 
 > A CLI for treating Excel-like spreadsheets as Python DAGs, with an agent loop on top so you never have to open Excel again.
 
@@ -17,8 +17,8 @@ This guide walks you from "empty folder" to "a model an agent can iterate on", i
 7. [Scalar rows](#7-scalar-rows)
 8. [Multi-dimensional rows](#8-multi-dimensional-rows)
 9. [Overrides](#9-overrides)
-10. [Snapshots and `sweet diff`](#10-snapshots-and-model-diff)
-11. [Reconciling code and `sweet.md`](#11-reconciling-code-and-modelmd)
+10. [Snapshots and `expression diff`](#10-snapshots-and-model-diff)
+11. [Reconciling code and `expression.md`](#11-reconciling-code-and-modelmd)
 12. [Cross-model dependencies](#12-cross-model-dependencies)
 13. [Multiple models in one file](#13-multiple-models-in-one-file)
 14. [Excel import / export](#14-excel-import--export)
@@ -33,7 +33,7 @@ This guide walks you from "empty folder" to "a model an agent can iterate on", i
 
 ## 1. Getting started
 
-`sweet` runs on Python 3.11+. The recommended toolchain is [`uv`](https://docs.astral.sh/uv/), but anything that installs from a `pyproject.toml` works.
+`expression` runs on Python 3.11+. The recommended toolchain is [`uv`](https://docs.astral.sh/uv/), but anything that installs from a `pyproject.toml` works.
 
 ### 1.1 Install `uv`
 
@@ -47,7 +47,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 ```bash
 mkdir my-models && cd my-models
 uv init --bare        # creates pyproject.toml, no main.py
-uv add sweet          # if `model` is published; else add as a path/git dep
+uv add expression          # if `model` is published; else add as a path/git dep
 ```
 
 For local development against this repo:
@@ -61,15 +61,15 @@ uv add "model @ git+https://…/model.git"   # git dependency
 Optional extras:
 
 ```bash
-uv add 'sweet[agent]'    # pulls anthropic SDK for `model agent`
-uv add 'sweet[verify]'   # pulls `formulas` for stronger Excel verification
-uv add 'sweet[dev]'      # pytest, ruff, pyright
+uv add 'expression[agent]'    # pulls anthropic SDK for `model agent`
+uv add 'expression[verify]'   # pulls `formulas` for stronger Excel verification
+uv add 'expression[dev]'      # pytest, ruff, pyright
 ```
 
 Verify it's wired up:
 
 ```bash
-uv run sweet --help
+uv run expression --help
 ```
 
 You should see the top-level CLI: `init`, `run`, `show`, `print`, `export`, `import`, `explain`, `diff`, `snapshot`, `overrides`, `doc`, `agent`.
@@ -77,25 +77,25 @@ You should see the top-level CLI: `init`, `run`, `show`, `print`, `export`, `imp
 ### 1.3 Scaffold a model
 
 ```bash
-uv run sweet init budget
+uv run expression init budget
 ```
 
 This creates a folder:
 
 ```
 budget/
-├── sweet.py        # one Model subclass, ready to edit
-├── sweet.md        # human-readable spec, kept in sync with code
+├── expression.py        # one Model subclass, ready to edit
+├── expression.md        # human-readable spec, kept in sync with code
 ├── inputs/         # CSV/JSON datasets your model reads
 ├── outputs/        # solve results land here
 └── tests/          # add pytest cases (auto-discovered)
 ```
 
-The starter `sweet.py` ships with a working budget example so the very first `sweet run` succeeds.
+The starter `expression.py` ships with a working budget example so the very first `expression run` succeeds.
 
 ```bash
 cd budget
-uv run sweet run
+uv run expression run
 ```
 
 Expected output:
@@ -113,7 +113,7 @@ You're up.
 
 ## 2. Your first model
 
-A `sweet.py` is a Python file that defines one `Model` subclass. The class has three kinds of attribute:
+A `expression.py` is a Python file that defines one `Model` subclass. The class has three kinds of attribute:
 
 | Attribute | Purpose | Example |
 |---|---|---|
@@ -124,7 +124,7 @@ A `sweet.py` is a Python file that defines one `Model` subclass. The class has t
 A minimal Layer-1 (pure-Python) model:
 
 ```python
-from sweet import Model, glob, periods, row
+from expression import Model, glob, periods, row
 
 class Budget(Model):
     time        = periods(2024, 2028)
@@ -150,12 +150,12 @@ Three things to know:
 
 The four core commands.
 
-### 3.1 `sweet run`
+### 3.1 `expression run`
 
 Topologically solves the DAG, writes `outputs/result.json`, and echoes each row:
 
 ```bash
-$ sweet run
+$ expression run
 ✓ DAG validated (1 row, 5 cells)
 ✓ Solved
   budget: [100.0, 105.0, 110.25, 115.76, 121.55]
@@ -165,30 +165,30 @@ $ sweet run
 Flags:
 
 - `--mode=eager` (default; only mode shipped today). `lazy` and `reactive` are reserved for future versions.
-- `--model PATH` — point at a different `sweet.py` (defaults to `./sweet.py`).
+- `--model PATH` — point at a different `expression.py` (defaults to `./expression.py`).
 
-### 3.2 `sweet show`
+### 3.2 `expression show`
 
 Print one cell or one whole row:
 
 ```bash
-$ sweet show budget
+$ expression show budget
 budget[2024] = 100.0
 budget[2025] = 105.0
 …
 
-$ sweet show 'budget[2026]'
+$ expression show 'budget[2026]'
 budget[2026] = 110.25
 ```
 
 Quote the bracketed form — most shells try to glob `[…]`.
 
-### 3.3 `sweet explain`
+### 3.3 `expression explain`
 
 Show the desugared (Layer-1) form of a row plus its declared dependencies:
 
 ```bash
-$ sweet explain budget
+$ expression explain budget
 # budget (row)
 # depends on: growth_rate, seed
 
@@ -199,18 +199,18 @@ def budget(self, t):
     return self.budget(t - 1) * (1 + self.growth_rate)
 ```
 
-Equivalent for a `@scalar`. This is the inspectability contract for Layer-2 sugar (see §5): whatever your sugared body becomes at class-definition time, `sweet explain` will print.
+Equivalent for a `@scalar`. This is the inspectability contract for Layer-2 sugar (see §5): whatever your sugared body becomes at class-definition time, `expression explain` will print.
 
-### 3.4 `sweet print`
+### 3.4 `expression print`
 
 Render the solved model as a column-aligned table or CSV:
 
 ```bash
-$ sweet print
+$ expression print
         2024    2025    2026    2027    2028
 budget   100   105.0  110.25  115.76  121.55
 
-$ sweet print --format csv > snapshot.csv
+$ expression print --format csv > snapshot.csv
 ```
 
 `-f`/`--format` accepts `table` (default) or `csv`.
@@ -260,7 +260,7 @@ Read/write with subscripts: `self.base_price[p, r]` returns the override (if any
 ### 4.4 CSV datasets (`dataset.csv`)
 
 ```python
-from sweet import Model, dataset, periods, row
+from expression import Model, dataset, periods, row
 
 class Forecast(Model):
     time       = periods(2024, 2028)
@@ -288,14 +288,14 @@ The CSV is loaded lazily on first access; values are coerced to `int`/`float`/`s
 Turn any solved row back into a `Dataset` for downstream consumers:
 
 ```python
-from sweet import dataset
+from expression import dataset
 
 projections = dataset.from_row(model, "forecast", columns=["year", "revenue"])
 ```
 
 The shape is `[{period_col: t, value_col: …}, …]`. Useful when chaining models or writing custom exporters.
 
-### 4.6 What `sweet run` writes
+### 4.6 What `expression run` writes
 
 Every solve writes `outputs/result.json`. The shape mirrors the model — model metadata, axes, inputs (globs), one `tables` entry per `@row` (with docstring, columns, and per-period results), and `scalars`:
 
@@ -326,11 +326,11 @@ Every solve writes `outputs/result.json`. The shape mirrors the model — model 
 }
 ```
 
-`depends_on` is populated for Layer-2 rows (the AST rewriter records explicit deps); Layer-1 rows leave it as `[]`. The committed snapshot for `sweet diff` (§10) lives separately at `.model/snapshot.json` and keeps a flat `{"row[period]": value}` shape for cell-level diffing.
+`depends_on` is populated for Layer-2 rows (the AST rewriter records explicit deps); Layer-1 rows leave it as `[]`. The committed snapshot for `expression diff` (§10) lives separately at `.model/snapshot.json` and keeps a flat `{"row[period]": value}` shape for cell-level diffing.
 
-### 4.7 What `sweet describe` writes
+### 4.7 What `expression describe` writes
 
-`sweet describe` writes `outputs/model.json` — the model's *definition*, not its solved values. It's the right input to feed an LLM, render an architecture diagram, or diff model structure across branches.
+`expression describe` writes `outputs/model.json` — the model's *definition*, not its solved values. It's the right input to feed an LLM, render an architecture diagram, or diff model structure across branches.
 
 ```json
 {
@@ -361,7 +361,7 @@ Every solve writes `outputs/result.json`. The shape mirrors the model — model 
       "mermaid": "graph TD\n    seed([seed])\n    budget[budget]\n    seed --> budget"
     }
   ],
-  "documentation": "…contents of sweet.md if present…"
+  "documentation": "…contents of expression.md if present…"
 }
 ```
 
@@ -376,7 +376,7 @@ Layer-1 (`def budget(self, t): …`) always works. Layer-2 is an AST rewrite of 
 The trigger is simple: **a row function with no positional arguments is treated as Layer 2.**
 
 ```python
-from sweet import Model, glob, periods, row
+from expression import Model, glob, periods, row
 
 class Budget(Model):
     time        = periods(2024, 2028)
@@ -417,7 +417,7 @@ Inside a `sugar=False` class, every row must be Layer-1 (`def name(self, t)`).
 
 ### 5.2 Inspecting the rewrite
 
-Run `sweet explain <row>` to see exactly what the rewriter produced. There is no hidden behaviour — if `explain` doesn't show what you expected, your sugar is wrong.
+Run `expression explain <row>` to see exactly what the rewriter produced. There is no hidden behaviour — if `explain` doesn't show what you expected, your sugar is wrong.
 
 ### 5.3 Limits (Phase 1)
 
@@ -434,7 +434,7 @@ When sugar gets in the way, drop to Layer-1 — it's always a one-liner away.
 `xl` is a plain Python module of Excel-flavoured functions. Import it where you write expressions:
 
 ```python
-from sweet import Model, glob, periods, row, scalar, xl
+from expression import Model, glob, periods, row, scalar, xl
 
 class Investment(Model):
     time          = periods(2024, 2030)
@@ -471,7 +471,7 @@ Notes:
 ### 6.2 Registering custom functions
 
 ```python
-from sweet import xl
+from expression import xl
 
 @xl.register
 def sharpe(returns, risk_free=0.02):
@@ -493,7 +493,7 @@ def my_sharpe():
 Some quantities aggregate over a whole row — IRR, NPV, totals. Use `@scalar`:
 
 ```python
-from sweet import Model, scalar, row, glob, periods, xl
+from expression import Model, scalar, row, glob, periods, xl
 
 class Deal(Model):
     time          = periods(2024, 2030)
@@ -557,7 +557,7 @@ For multi-dim cells, `model.cell("revenue", ("A", "EU", 2024))` (tuple) returns 
 
 Hardcoded one-off adjustments are recorded as data, never edited into formulas.
 
-`overrides.toml` lives next to `sweet.py`:
+`overrides.toml` lives next to `expression.py`:
 
 ```toml
 [[override]]
@@ -573,7 +573,7 @@ value = 0.07
 reason = "Updated forecast"
 ```
 
-`sweet run` applies overrides *before* solving:
+`expression run` applies overrides *before* solving:
 
 - **Row overrides** are pre-populated into the cell cache; downstream cells see them naturally.
 - **Glob overrides** set the instance attribute via the descriptor.
@@ -582,33 +582,33 @@ reason = "Updated forecast"
 ### 9.1 CLI
 
 ```bash
-sweet overrides add budget 2025 150 --reason "Board adjustment"
-sweet overrides add growth_rate 0.07 --glob --reason "Updated forecast"
-sweet overrides list
-sweet overrides rm budget 2025
-sweet overrides clear --yes
+expression overrides add budget 2025 150 --reason "Board adjustment"
+expression overrides add growth_rate 0.07 --glob --reason "Updated forecast"
+expression overrides list
+expression overrides rm budget 2025
+expression overrides clear --yes
 ```
 
 The `value` argument is parsed as JSON when possible (so `0.05`, `true`, `"text"`, `[1,2,3]` all work); otherwise treated as a string.
 
-The `sweet run` echo line shows whether overrides were applied: `✓ Solved with 1 override`.
+The `expression run` echo line shows whether overrides were applied: `✓ Solved with 1 override`.
 
 ---
 
-## 10. Snapshots and `sweet diff`
+## 10. Snapshots and `expression diff`
 
 `outputs/result.json` is rewritten on every run — that's the *latest* solve. The *committed* snapshot lives at `.model/snapshot.json` and only updates when you accept it.
 
 ```bash
-$ sweet snapshot accept
+$ expression snapshot accept
 ✓ Wrote snapshot to .model/snapshot.json
 ```
 
 After making changes, see what moved:
 
 ```bash
-$ sweet run
-$ sweet diff
+$ expression run
+$ expression diff
 # changed (1)
   ~ budget[2025]: 105.0 → 110.0
 ```
@@ -619,17 +619,17 @@ The diff is **exact** — solving is deterministic, and a `1e-15` drift is worth
 
 ---
 
-## 11. Reconciling code and `sweet.md`
+## 11. Reconciling code and `expression.md`
 
-`sweet.md` is the human-readable spec. It's not auto-generated — you write it — but the framework checks for drift between what the code declares and what the markdown mentions.
+`expression.md` is the human-readable spec. It's not auto-generated — you write it — but the framework checks for drift between what the code declares and what the markdown mentions.
 
 Mention contract: a name in the markdown counts as "documented" if it appears inside backticks (`` `budget` ``, `` `budget[2024]` ``).
 
 ```bash
-$ sweet doc sync
-# In code but not in sweet.md (1)
+$ expression doc sync
+# In code but not in expression.md (1)
   - cogs
-# Mentioned in sweet.md but not in code (1)
+# Mentioned in expression.md but not in code (1)
   - revenu
 ```
 
@@ -655,17 +655,17 @@ The markdown structure the framework expects (PRD §6):
 Compose models across files with `depends`:
 
 ```python
-# costs/sweet.py
-from sweet import Model, periods, row
+# costs/expression.py
+from expression import Model, periods, row
 
 class Costs(Model):
     time = periods(2024, 2026)
     @row
     def total_cost(self, t): ...
 
-# pnl/sweet.py
-from sweet import Model, depends, periods, row
-from costs.sweet import Costs
+# pnl/expression.py
+from expression import Model, depends, periods, row
+from costs.expression import Costs
 
 class PnL(Model):
     time  = periods(2024, 2026)
@@ -684,7 +684,7 @@ In Layer-2 sugar, bare `costs.total_cost[n]` works — `costs` is a known model 
 
 ## 13. Multiple models in one file
 
-Excel workbooks have multiple sheets, each of which is its own "model layer". The sweet equivalent is **multiple `Model` subclasses in the same `sweet.py`** — one per logical layer. `sweet run` discovers all of them automatically, resolves their dependency order, and writes a combined `outputs/result.json`.
+Excel workbooks have multiple sheets, each of which is its own "model layer". The expression equivalent is **multiple `Model` subclasses in the same `expression.py`** — one per logical layer. `expression run` discovers all of them automatically, resolves their dependency order, and writes a combined `outputs/result.json`.
 
 ### 13.1 When to use it
 
@@ -698,11 +698,11 @@ Put multiple models in one file when the layers belong to the same workspace and
 
 ### 13.2 Defining multiple models
 
-Add as many `Model` subclasses to `sweet.py` as you like. Connect them with `depends()` exactly as in the multi-file case — `depends()` is still required for one model's rows to access another's solved values.
+Add as many `Model` subclasses to `expression.py` as you like. Connect them with `depends()` exactly as in the multi-file case — `depends()` is still required for one model's rows to access another's solved values.
 
 ```python
-# sweet.py
-from sweet import Model, depends, glob, periods, row, scalar
+# expression.py
+from expression import Model, depends, glob, periods, row, scalar
 
 class SalaryModel(Model):
     """Layer 1: gross → net salary."""
@@ -742,7 +742,7 @@ class BudgetModel(Model):
 ### 13.3 Running
 
 ```bash
-sweet run
+expression run
 ```
 
 Output:
@@ -758,9 +758,9 @@ The discovery line shows the topological order — `SalaryModel` is solved first
 
 ### 13.4 Dependency ordering
 
-`sweet run` builds a directed graph from the `depends()` declarations between models in the file and topologically sorts it. You never specify an entry point — the solver figures out who needs whom. Models with no inter-dependencies between them are discovered in definition order.
+`expression run` builds a directed graph from the `depends()` declarations between models in the file and topologically sorts it. You never specify an entry point — the solver figures out who needs whom. Models with no inter-dependencies between them are discovered in definition order.
 
-If a cycle exists (Model A depends on Model B and Model B depends on Model A), `sweet run` exits with a clear error:
+If a cycle exists (Model A depends on Model B and Model B depends on Model A), `expression run` exits with a clear error:
 
 ```
 ✗ Circular dependency between models: SalaryModel -> BudgetModel -> SalaryModel
@@ -774,9 +774,9 @@ Cross-model cycles within `depends()` chains declared inside the same class are 
 The `show` command searches all models by default:
 
 ```bash
-sweet show 'gross[2026]'             # searches all models
-sweet show 'SalaryModel.gross[2026]' # qualified: specific model
-sweet show 'BudgetModel.savings'     # whole row across all periods
+expression show 'gross[2026]'             # searches all models
+expression show 'SalaryModel.gross[2026]' # qualified: specific model
+expression show 'BudgetModel.savings'     # whole row across all periods
 ```
 
 ### 13.6 Combined `result.json`
@@ -802,43 +802,43 @@ sweet show 'BudgetModel.savings'     # whole row across all periods
 }
 ```
 
-`sweet describe` also covers all models in the `models` list of `outputs/model.json`.
+`expression describe` also covers all models in the `models` list of `outputs/model.json`.
 
 ### 13.7 Overrides with multiple models
 
 Without a scope qualifier, an override applies to every model that has a row or glob with that name:
 
 ```bash
-sweet overrides add raise_rate 0.05 --reason "optimistic scenario"
+expression overrides add raise_rate 0.05 --reason "optimistic scenario"
 ```
 
 To restrict to one model:
 
 ```bash
-sweet overrides add raise_rate 0.05 --model-name SalaryModel --reason "optimistic scenario"
+expression overrides add raise_rate 0.05 --model-name SalaryModel --reason "optimistic scenario"
 ```
 
 The `--model-name` flag writes a `model = "SalaryModel"` field to `overrides.toml` so the override is ignored when solving other models.
 
 ### 13.8 Snapshots and diff
 
-When multiple models are solved, `sweet snapshot accept` writes keys prefixed by model name:
+When multiple models are solved, `expression snapshot accept` writes keys prefixed by model name:
 
 ```
 SalaryModel.gross[2025]   = 55000
 BudgetModel.savings[2025] = 5940.0
 ```
 
-`sweet diff` then shows drift per model, scoped correctly.
+`expression diff` then shows drift per model, scoped correctly.
 
 ### 13.9 Multi-file mode
 
 For shared upstream models, the multi-file pattern is unchanged:
 
 ```python
-# pnl/sweet.py
-from sweet import Model, depends, periods, row
-from costs.sweet import Costs  # explicit import
+# pnl/expression.py
+from expression import Model, depends, periods, row
+from costs.expression import Costs  # explicit import
 
 class PnL(Model):
     time  = periods(2024, 2026)
@@ -849,7 +849,7 @@ class PnL(Model):
         return self.revenue(t) - self.costs.total_cost(t)
 ```
 
-`sweet run` in `pnl/` discovers only `PnL` (one model), solves it, and resolves `Costs` lazily via `depends()` exactly as before. The multi-file and same-file patterns compose naturally.
+`expression run` in `pnl/` discovers only `PnL` (one model), solves it, and resolves `Costs` lazily via `depends()` exactly as before. The multi-file and same-file patterns compose naturally.
 
 ---
 
@@ -858,13 +858,13 @@ class PnL(Model):
 ### 13.1 Import
 
 ```bash
-sweet import quarterly.xlsx --out my_quarterly --classname Quarterly
+expression import quarterly.xlsx --out my_quarterly --classname Quarterly
 ```
 
 The importer:
 1. Reads the workbook with `openpyxl`.
 2. Detects the time axis (header row of years/dates), globals (named cells), and row-shaped formula bands.
-3. Emits a Layer-1 `sweet.py` skeleton plus a `sweet.md` with an **Issues found** section listing anything ambiguous.
+3. Emits a Layer-1 `expression.py` skeleton plus a `expression.md` with an **Issues found** section listing anything ambiguous.
 4. Records auto-tests so the import only "succeeds" if every original cell value matches the generated solve.
 
 This is non-interactive in Phase 2; Phase 3 wires it into the agent loop so questions can be asked. Either way, the contract is: **the imported model reads better than the original Excel** — the agent will restructure layout-driven logic into clean DAG form rather than transliterating it.
@@ -872,10 +872,10 @@ This is non-interactive in Phase 2; Phase 3 wires it into the agent loop so ques
 ### 13.2 Export
 
 ```bash
-sweet export                        # → outputs/model.xlsx
-sweet export --out budget.xlsx
-sweet export --skip-verify
-sweet export --tol 1e-6             # verification tolerance
+expression export                        # → outputs/model.xlsx
+expression export --out budget.xlsx
+expression export --skip-verify
+expression export --tol 1e-6             # verification tolerance
 ```
 
 The exporter:
@@ -894,7 +894,7 @@ Round-trip fidelity is a values contract, not a formatting one.
 `model print` is the cheapest way to eyeball results.
 
 ```bash
-$ sweet print
+$ expression print
         2024    2025    2026    2027    2028
 budget   100   105.0  110.25  115.76  121.55
 
@@ -913,7 +913,7 @@ Inside Python: `model.format_table()` and `model.format_csv()` produce the same 
 `model agent` launches the interactive loop the framework was built around. It:
 
 - Loads the bundled skills (`model/skills/*/SKILL.md`).
-- Snapshots your workspace into a system prompt (file tree, `sweet.md`, recent traces).
+- Snapshots your workspace into a system prompt (file tree, `expression.md`, recent traces).
 - Talks to a *harness* (Anthropic API by default; Claude Code or Codex via opt-in).
 - Exposes three tools to the model: `read_file`, `write_file`, `run_model`.
 - Confirms each *write* or *run_model* call before executing (skip with `--yes`).
@@ -926,7 +926,7 @@ export ANTHROPIC_API_KEY=sk-ant-…
 model agent
 » add a cogs row at 40% of budget and run
 
-[tool] write_file({"path": "sweet.py", …})
+[tool] write_file({"path": "expression.py", …})
 Proceed? [y/N] y
 [tool] run_model({"subcommand": "run"})
 Proceed? [y/N] y
@@ -946,10 +946,10 @@ Proceed? [y/N] y
 
 The default system prompt instructs the agent to:
 
-- Make **one** small change at a time, then `sweet run` and check the diff.
+- Make **one** small change at a time, then `expression run` and check the diff.
 - Never bake hardcoded values into formulas — record them as overrides.
-- After any code change, run `sweet run` (and `sweet test` if tests exist).
-- Reference cells in backticks (so `sweet doc sync` can pick them up).
+- After any code change, run `expression run` (and `expression test` if tests exist).
+- Reference cells in backticks (so `expression doc sync` can pick them up).
 
 Skills (§16) layer in stricter rules: bottom-up modeling, override discipline, parameter elicitation, etc. You can add or edit skills without touching code.
 
@@ -957,10 +957,10 @@ Skills (§16) layer in stricter rules: bottom-up modeling, override discipline, 
 
 The same skills ship as a self-contained plugin for **Claude Code** and
 **Codex** — that is the supported way to drive `model` from an LLM.
-Skills appear under `/sweet:<skill-name>` and slash commands wrap the
-common CLI verbs (`/sweet:run`, `/sweet:diff`, `/sweet:show`,
-`/sweet:explain`, `/sweet:export`). Each plugin bundles a
-`sweet-framework` skill (discipline + CLI reference) and the long-form
+Skills appear under `/expression:<skill-name>` and slash commands wrap the
+common CLI verbs (`/expression:run`, `/expression:diff`, `/expression:show`,
+`/expression:explain`, `/expression:export`). Each plugin bundles a
+`expression-framework` skill (discipline + CLI reference) and the long-form
 spec/tutorial under `reference/`, so the in-host agent has everything it
 needs without a framework checkout.
 
@@ -1002,7 +1002,7 @@ The agent concatenates every loaded skill's body into the system prompt.
 | `circularity-resolution` | Walk the user through breaking a cycle (lag / split / simplify). |
 | `override-discipline` | Hardcoded value spotted? Convert to recorded override. |
 | `excel-fidelity` | On export, diff in-memory solve against the produced `.xlsx`. |
-| `import-excel` | Use `openpyxl`; ask about ambiguous formulas; flag TODOs in `sweet.md`. |
+| `import-excel` | Use `openpyxl`; ask about ambiguous formulas; flag TODOs in `expression.md`. |
 | `harness-adapter` | Contract for plugging in a new LLM harness. |
 
 ### 16.2 Adding your own
@@ -1024,7 +1024,7 @@ Talks directly to the Anthropic API via the `anthropic` SDK. Owns the tool-use r
 Setup:
 
 ```bash
-uv add 'sweet[agent]'
+uv add 'expression[agent]'
 export ANTHROPIC_API_KEY=sk-ant-…
 model agent
 ```
@@ -1107,7 +1107,7 @@ jq -c 'select(.kind=="harness.response") | {text, stop_reason}' .model/trace/*.j
 Programmatic access:
 
 ```python
-from sweet import Tracer
+from expression import Tracer
 with Tracer(workspace) as tr:
     tr.event("custom", note="something happened")
 ```
@@ -1121,27 +1121,27 @@ Outside a `with` block, `Tracer.event()` still appends — useful in CLI command
 ### CLI surface
 
 ```
-sweet init <name>                Create a new model folder.
-sweet run [--mode=eager]         Discover all models, solve in DAG order, write outputs/result.json.
-sweet show <row>[<period>]       Print one cell or a row (searches all models).
-sweet show Model.row[period]     Qualified show: restrict to a specific model.
-sweet print [-f table|csv]       Render all models as tables (separator between each).
-sweet explain <row|scalar>       Show the desugared form + dependencies.
-sweet describe [--out f.json]    Export all model definitions (DAG, source, mermaid).
-sweet export [--out f.xlsx]      Render to .xlsx, verify values match.
-sweet import <f.xlsx>            Convert Excel → sweet.py + sweet.md.
-sweet diff                       Compare current solve to .model/snapshot.json.
-sweet snapshot accept            Pin the current solve as the new snapshot.
-sweet overrides add [--model-name X]   Manage overrides.toml (--model-name scopes to one model).
-sweet overrides list|rm|clear    Inspect / remove overrides.
-sweet doc sync                   Report drift between sweet.py and sweet.md.
-sweet agent [--harness=…] [-y]   Launch the interactive agent loop.
+expression init <name>                Create a new model folder.
+expression run [--mode=eager]         Discover all models, solve in DAG order, write outputs/result.json.
+expression show <row>[<period>]       Print one cell or a row (searches all models).
+expression show Model.row[period]     Qualified show: restrict to a specific model.
+expression print [-f table|csv]       Render all models as tables (separator between each).
+expression explain <row|scalar>       Show the desugared form + dependencies.
+expression describe [--out f.json]    Export all model definitions (DAG, source, mermaid).
+expression export [--out f.xlsx]      Render to .xlsx, verify values match.
+expression import <f.xlsx>            Convert Excel → expression.py + expression.md.
+expression diff                       Compare current solve to .model/snapshot.json.
+expression snapshot accept            Pin the current solve as the new snapshot.
+expression overrides add [--model-name X]   Manage overrides.toml (--model-name scopes to one model).
+expression overrides list|rm|clear    Inspect / remove overrides.
+expression doc sync                   Report drift between expression.py and expression.md.
+expression agent [--harness=…] [-y]   Launch the interactive agent loop.
 ```
 
 ### DSL primitives
 
 ```python
-from sweet import (
+from expression import (
     Model, row, scalar, glob, periods, dim, matrix, depends,
     dataset, xl, register,
 )
@@ -1184,7 +1184,7 @@ growth_rate                      # bare global → self.growth_rate
 ### Iteration loop (the agent's contract)
 
 ```
-edit  →  sweet run  →  sweet diff  →  sweet test  →  commit
+edit  →  expression run  →  expression diff  →  expression test  →  commit
 ```
 
 Don't skip steps. The diff is the safety net.

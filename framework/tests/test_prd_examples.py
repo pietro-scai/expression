@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 from pathlib import Path
 
-from sweet import Model, dataset, dim, glob, matrix, periods, row, scalar, xl
+from expression import Model, dataset, dim, glob, matrix, periods, row, scalar, xl
 
 # ---------------------------------------------------------------------------
 # PRD 12.2 — Multi-row dependency
@@ -50,7 +50,7 @@ def test_prd_12_2_pnl():
 
 
 def test_prd_12_3_override():
-    from sweet.overrides import Override, apply_overrides
+    from expression.overrides import Override, apply_overrides
 
     m = PRD12_2()
     apply_overrides(m, [Override(target="revenue", value=1500, period=2025)])

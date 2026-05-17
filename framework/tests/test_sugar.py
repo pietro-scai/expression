@@ -6,7 +6,7 @@ import math
 
 import pytest
 
-from sweet import Model, ModelError, glob, periods, row, scalar, xl
+from expression import Model, ModelError, glob, periods, row, scalar, xl
 
 # ---------------------------------------------------------------------------
 # PRD example 12.1 in Layer 2 form.

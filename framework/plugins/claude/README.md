@@ -6,13 +6,13 @@ Spreadsheet-as-DAG modeling skills and slash commands for the
 
 ## What's inside
 
-- **Skills** (`/sweet:<skill-name>`) — eight skills covering bottom-up
+- **Skills** (`/expression:<skill-name>`) — eight skills covering bottom-up
   modeling, parameter elicitation, override discipline, circularity
   resolution, Excel fidelity, the import flow, the small-step iteration
   loop, and the harness adapter contract.
-- **Slash commands** — `/sweet:run`, `/sweet:diff`, `/sweet:show`,
-  `/sweet:explain`, `/sweet:export`, each a thin wrapper around the
-  corresponding `sweet` CLI command.
+- **Slash commands** — `/expression:run`, `/expression:diff`, `/expression:show`,
+  `/expression:explain`, `/expression:export`, each a thin wrapper around the
+  corresponding `expression` CLI command.
 
 ## Install (local dev)
 
@@ -28,13 +28,13 @@ make dev-install
 Inside the `claude` REPL:
 
 ```
-/plugin install sweet@sweet-dev
+/plugin install expression@expression-dev
 ```
 
-Then in any `sweet` workspace:
+Then in any `expression` workspace:
 
 ```
-/sweet:bottom-up-modeling
+/expression:bottom-up-modeling
 "Forecast SaaS revenue with 5% monthly churn."
 ```
 

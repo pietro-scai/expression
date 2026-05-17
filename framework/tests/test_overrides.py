@@ -10,8 +10,8 @@ from pathlib import Path
 
 import pytest
 
-from sweet import Model, ModelError, glob, periods, row
-from sweet.overrides import (
+from expression import Model, ModelError, glob, periods, row
+from expression.overrides import (
     Override,
     apply_overrides,
     read_overrides,
@@ -114,7 +114,7 @@ def test_read_invalid_toml_structure(tmp_path: Path):
 
 
 def _model_bin() -> str:
-    bin_path = Path(sys.executable).parent / "sweet"
+    bin_path = Path(sys.executable).parent / "expression"
     if not bin_path.exists():
         pytest.skip(f"Console script not installed at {bin_path}")
     return str(bin_path)

@@ -7,7 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from sweet.agent.harness import (
+from expression.agent.harness import (
     HarnessResponse,
     Message,
     ToolCall,
@@ -16,7 +16,7 @@ from sweet.agent.harness import (
     list_harnesses,
     register_harness,
 )
-from sweet.agent.loop import LoopConfig, run_loop
+from expression.agent.loop import LoopConfig, run_loop
 
 
 @dataclass
@@ -70,11 +70,11 @@ def _scripted_input(*lines: str) -> Callable[[str], str]:
 
 def test_loop_dispatches_read_file_tool(tmp_path: Path) -> None:
     """End-to-end: scripted harness asks for a file, loop reads it back."""
-    (tmp_path / "sweet.py").write_text("# fake model\n")
+    (tmp_path / "expression.py").write_text("# fake model\n")
     harness = _ScriptedHarness(
         script=[
             HarnessResponse(
-                tool_calls=[ToolCall(id="t1", name="read_file", args={"path": "sweet.py"})],
+                tool_calls=[ToolCall(id="t1", name="read_file", args={"path": "expression.py"})],
                 stop_reason="tool_use",
             ),
             HarnessResponse(text="ok, I read it.", stop_reason="end_turn"),
@@ -136,11 +136,11 @@ def test_loop_skips_tools_when_harness_doesnt_support_them(tmp_path: Path) -> No
 
 def test_run_model_tool_runs_in_workspace(tmp_path: Path) -> None:
     """``run_model`` tool dispatches via ``python -m model``."""
-    from sweet.agent.tools import ToolEnv, execute
+    from expression.agent.tools import ToolEnv, execute
 
     # Create a minimal valid workspace
-    (tmp_path / "sweet.py").write_text(
-        "from sweet import Model, periods, glob, row\n\n"
+    (tmp_path / "expression.py").write_text(
+        "from expression import Model, periods, glob, row\n\n"
         "class M(Model):\n"
         "    time = periods(2024, 2025)\n"
         "    seed = glob(10)\n"

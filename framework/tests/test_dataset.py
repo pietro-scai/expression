@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from sweet import Model, dataset, glob, periods, row
+from expression import Model, dataset, glob, periods, row
 
 
 def test_csv_dataset_load_and_last(tmp_path: Path):
