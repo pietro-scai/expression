@@ -12,10 +12,12 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export default function Page() {
   return (
-    <SidebarProvider>
+    
+    <SidebarProvider><TooltipProvider>
       <SidebarLeft />
       <SidebarInset className="flex flex-col overflow-hidden">
         <header className="sticky top-0 flex h-14 shrink-0 items-center gap-2 bg-background">
@@ -37,7 +39,7 @@ export default function Page() {
           </div>
         </header>
         <DashboardLayout />
-      </SidebarInset>
+      </SidebarInset></TooltipProvider>    
     </SidebarProvider>
   );
 }

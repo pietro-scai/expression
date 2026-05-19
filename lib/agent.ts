@@ -16,14 +16,15 @@ const SANDBOX_TIMEOUT_MS = 45 * 60 * 1000;
 // Push the deadline forward on every request (capped at plan max by the API).
 const EXTEND_BY_MS = 20 * 60 * 1000;
 
-interface AgentState {
-  agent: ToolLoopAgent;
+// Sandbox state is cached across requests; ToolLoopAgent is created fresh each
+// request so per-request context (saveModel closure) is always current.
+interface SandboxState {
   sandbox: Sandbox;
   sandboxId: string;
 }
 
-let agentState: AgentState | null = null;
-let agentPromise: Promise<AgentState> | null = null;
+let agentState: SandboxState | null = null;
+let agentPromise: Promise<SandboxState> | null = null;
 
 // Snapshot of the provisioned environment — survives warm restarts so cold starts
 // after a timeout skip the 1–2 min provisioning and boot in seconds instead.
@@ -67,18 +68,26 @@ export async function stopSandbox(): Promise<void> {
   }
 }
 
+export interface AgentContext {
+  userId: string;
+  conversationId: string;
+  saveModel: (snapshots: import("./model-types").ModelSnapshot[]) => Promise<void>;
+}
+
 export function getAgent(
   preferredSandboxId: string | null,
-  preferredSnapshotId?: string | null
+  preferredSnapshotId?: string | null,
+  context?: AgentContext
 ): Promise<ToolLoopAgent> {
-  // Warm path: client confirms the exact sandbox we have cached.
+  // Warm path: reuse the live sandbox but build a fresh agent so that the
+  // per-request saveModel closure is always current.
   if (preferredSandboxId && agentState?.sandboxId === preferredSandboxId) {
-    return Promise.resolve(agentState.agent);
+    return Promise.resolve(buildAgent(agentState.sandbox, context));
   }
 
   // In-flight init, no preference — ride it out rather than double-provision.
   if (!preferredSandboxId && agentPromise && !agentState) {
-    return agentPromise.then((s) => s.agent);
+    return agentPromise.then((s) => buildAgent(s.sandbox, context));
   }
 
   // Seed module-level snapshot cache from the client's persisted store.
@@ -87,7 +96,7 @@ export function getAgent(
   }
 
   agentState = null;
-  agentPromise = initAgent(preferredSandboxId ?? undefined)
+  agentPromise = bootSandboxState(preferredSandboxId ?? undefined)
     .then((state) => {
       agentState = state;
       return state;
@@ -98,41 +107,25 @@ export function getAgent(
       throw err;
     });
 
-  return agentPromise.then((s) => s.agent);
+  return agentPromise.then((s) => buildAgent(s.sandbox, context));
 }
 
 // ---------------------------------------------------------------------------
 // Internals
 // ---------------------------------------------------------------------------
 
-async function initAgent(resumeSandboxId?: string): Promise<AgentState> {
-  let sandbox: Sandbox;
-
-  if (resumeSandboxId) {
-    try {
-      // Reconnect to the still-running sandbox.
-      sandbox = await Sandbox.get({ sandboxId: resumeSandboxId });
-      // Push the deadline forward immediately so the reconnected sandbox
-      // doesn't expire in the middle of this session.
-      await sandbox.extendTimeout(EXTEND_BY_MS);
-    } catch {
-      // Sandbox gone (410) — fast-start from snapshot if we have one.
-      sandbox = await bootSandbox();
-    }
-  } else {
-    sandbox = await bootSandbox();
-  }
-
+/** Build a fresh ToolLoopAgent for a given sandbox and optional per-request context. */
+function buildAgent(sandbox: Sandbox, context?: AgentContext): ToolLoopAgent {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tools: Record<string, any> = {
-    update_model: createUpdateModelTool(sandbox, markSandboxGone),
+    update_model: createUpdateModelTool(sandbox, markSandboxGone, context?.saveModel),
     run_model: createRunModelTool(sandbox, markSandboxGone),
     bash: createBashTool(sandbox, markSandboxGone),
     render_chart: createRenderChartTool(),
     webSearch: createWebSearchTool(),
   };
 
-  const agent = new ToolLoopAgent({
+  return new ToolLoopAgent({
     model: gateway("anthropic/claude-sonnet-4-6"),
     tools,
     providerOptions: {
@@ -269,8 +262,27 @@ WEB SEARCH
 - Do NOT use it proactively or for general questions you can answer from knowledge.
 - After searching, use the results to populate realistic glob values or explain assumption choices — never just dump the raw results.`,
   });
+}
 
-  return { agent, sandbox, sandboxId: sandbox.sandboxId };
+async function bootSandboxState(resumeSandboxId?: string): Promise<SandboxState> {
+  let sandbox: Sandbox;
+
+  if (resumeSandboxId) {
+    try {
+      // Reconnect to the still-running sandbox.
+      sandbox = await Sandbox.get({ sandboxId: resumeSandboxId });
+      // Push the deadline forward immediately so the reconnected sandbox
+      // doesn't expire in the middle of this session.
+      await sandbox.extendTimeout(EXTEND_BY_MS);
+    } catch {
+      // Sandbox gone (410) — fast-start from snapshot if we have one.
+      sandbox = await bootSandbox();
+    }
+  } else {
+    sandbox = await bootSandbox();
+  }
+
+  return { sandbox, sandboxId: sandbox.sandboxId };
 }
 
 /**

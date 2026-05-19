@@ -374,6 +374,7 @@ def _build_function(
     new_fn = ns[name]
     new_fn.__qualname__ = original.__qualname__
     new_fn.__module__ = original.__module__
+    new_fn.__doc__ = original.__doc__
     return new_fn
 
 

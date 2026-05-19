@@ -181,6 +181,7 @@ export default function HomePage() {
           <Waitlist
             appearance={{
               elements: {
+                logoBox: "hidden",
                 rootBox: "bg-none border-none",
                 card: "bg-transparent border-none",
                 headerTitle: "text-2xl font-bold text-zinc-900 dark:text-zinc-100",
@@ -189,7 +190,10 @@ export default function HomePage() {
                   "",
                 formFieldInput:
                   "rounded-lg border-zinc-300 dark:border-zinc-700 focus:ring-indigo-500 focus:border-indigo-500",
-                footerActionLink: "text-indigo-600 hover:text-indigo-500 font-semibold",
+                footerAction: "hidden",
+                footer: "hidden",
+                formFieldLabel: "hidden"
+                
               },
             }}
           />

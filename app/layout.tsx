@@ -3,6 +3,7 @@ import { ClerkProvider, Show, SignInButton, SignUpButton, UserButton } from "@cl
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
+import { Providers } from "@/components/providers"
 import { cn } from "@/lib/utils";
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
@@ -31,7 +32,7 @@ export default function RootLayout({
           }
         }} >
 
-          <ThemeProvider>{children}</ThemeProvider>
+          <ThemeProvider><Providers>{children}</Providers></ThemeProvider>
         </ClerkProvider>
       </body>
     </html>

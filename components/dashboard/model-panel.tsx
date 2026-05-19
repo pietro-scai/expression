@@ -545,8 +545,8 @@ export function ModelPanel({ className }: { className?: string }) {
         )}
       >
         {/* Tab bar */}
-        <div className="flex shrink-0 items-center gap-2 border-b px-3 py-1.5">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as PanelTab)}>
+        <div className="flex shrink-0 items-center gap-2 px-3 py-1.5">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as PanelTab)} >
             <TabsList className="h-7">
               <TabsTrigger value="model" className="h-6 px-2.5 text-xs">
                 Model

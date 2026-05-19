@@ -96,7 +96,11 @@ async function loadModelJson(
   }
 }
 
-export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
+export function createUpdateModelTool(
+  sandbox: Sandbox,
+  onGone: () => void,
+  onModelSaved?: (snapshots: ModelSnapshot[]) => Promise<void>
+) {
   return {
     description:
       "Write the complete expression.py model file. Automatically runs expression describe and expression run, returning snapshots with both structure and solved values so the UI stays in sync.",
@@ -180,7 +184,7 @@ export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
           }];
         }
 
-        return definitions.map((definition, i) => {
+        const snapshots: ModelSnapshot[] = definitions.map((definition, i) => {
           const modelData = executionModels[i];
           return {
             source: content,
@@ -199,6 +203,10 @@ export function createUpdateModelTool(sandbox: Sandbox, onGone: () => void) {
               : {}),
           };
         });
+
+        if (onModelSaved) onModelSaved(snapshots).catch(() => {});
+
+        return snapshots;
       } catch (err) {
         if (isSandboxGone(err)) return sandboxGoneResult(onGone);
         throw err;

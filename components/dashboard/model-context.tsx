@@ -1,34 +1,32 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useContext } from "react";
 import type { ModelSnapshot } from "@/lib/model-types";
+import { useConversationStore } from "@/lib/conversation-store";
 
 type ModelContextType = {
   snapshots: ModelSnapshot[];
-  setSnapshot: (snapshot: ModelSnapshot) => void;
-  setAllSnapshots: (snapshots: ModelSnapshot[]) => void;
 };
 
-export const ModelContext = createContext<ModelContextType>({
-  snapshots: [],
-  setSnapshot: () => {},
-  setAllSnapshots: () => {},
-});
+export const ModelContext = createContext<ModelContextType>({ snapshots: [] });
 
-export function ModelProvider({ children }: { children: React.ReactNode }) {
-  const [snapshots, setSnapshots] = useState<ModelSnapshot[]>([]);
+// Stable fallback so the Zustand selector never returns a new [] reference,
+// which would cause useSyncExternalStore to loop.
+const EMPTY: ModelSnapshot[] = [];
 
-  const setSnapshot = useCallback((snapshot: ModelSnapshot) => {
-    setSnapshots([snapshot]);
-  }, []);
-
-  const setAllSnapshots = useCallback((incoming: ModelSnapshot[]) => {
-    if (incoming.length === 0) return;
-    setSnapshots(incoming);
-  }, []);
+export function ModelProvider({
+  activeConversationId,
+  children,
+}: {
+  activeConversationId: string | null;
+  children: React.ReactNode;
+}) {
+  const snapshots = useConversationStore(
+    (s) => s.modelSnapshots[activeConversationId ?? "__new__"] ?? EMPTY
+  );
 
   return (
-    <ModelContext.Provider value={{ snapshots, setSnapshot, setAllSnapshots }}>
+    <ModelContext.Provider value={{ snapshots }}>
       {children}
     </ModelContext.Provider>
   );

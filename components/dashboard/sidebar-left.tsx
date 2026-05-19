@@ -22,6 +22,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useConversations, useDeleteConversation } from "@/lib/queries";
+import { useConversationStore } from "@/lib/conversation-store";
 import { useQueryClient } from "@tanstack/react-query";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
@@ -34,6 +35,7 @@ function SidebarNav() {
   const { data: convs } = useConversations();
   const { mutate: deleteConv } = useDeleteConversation();
   const qc = useQueryClient();
+  const { bumpNewConversation } = useConversationStore();
 
   const prefetchConversation = (id: string) =>
     qc.prefetchQuery({
@@ -58,7 +60,7 @@ function SidebarNav() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={() => router.push("/expr")}
+              onClick={() => { bumpNewConversation(); router.push("/expr"); }}
               className="gap-2"
             >
               <PlusIcon className="size-4" />
