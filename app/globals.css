@@ -6,7 +6,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+
 @theme inline {
+
     --font-heading: var(--font-sans);
     --font-sans: var(--font-sans);
     --color-sidebar-ring: var(--sidebar-ring);
@@ -116,6 +118,7 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+    /* --clerk-color-muted: transparent; */
 }
 
 @layer base {
@@ -169,7 +172,11 @@
 } 
 
 
-
+[data-streamdown="list-item"] {
+  padding-inline-start: 1.4em;
+  text-indent: -1.3em;
+  padding: none;
+}
 
 /* Code */
 
